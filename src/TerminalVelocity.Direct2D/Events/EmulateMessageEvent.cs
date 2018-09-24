@@ -48,5 +48,11 @@ namespace TerminalVelocity.Direct2D.Events
             var message = new WindowMessage(IntPtr.Zero, (uint)WM.CLOSE, IntPtr.Zero, IntPtr.Zero);
             return new EmulateMessageEvent(message);
         }
+
+        public static unsafe EmulateMessageEvent CreatePaint()
+        {
+            var message = new WindowMessage(IntPtr.Zero, (uint)WM.PAINT, IntPtr.Zero, IntPtr.Zero);
+            return new EmulateMessageEvent(message);
+        }
     }
 }

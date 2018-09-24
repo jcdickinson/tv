@@ -79,8 +79,6 @@ namespace TerminalVelocity.Direct2D
 
         protected override void OnSize(ref SizePacket packet)
         {
-            _directX.Resize(packet.Size);
-
             var evt = new SizeEvent(packet);
             Size.Publish(ref evt);
             if (!evt.IsHandled)

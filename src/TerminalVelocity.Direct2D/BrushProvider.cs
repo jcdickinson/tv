@@ -18,6 +18,9 @@ namespace TerminalVelocity.Direct2D
         public const string ChromeCloseButtonContract = "ChromeCloseButton.UI.Direct2D.TerminalVelocity";
         public const string LogoContract = "Logo.UI.Direct2D.TerminalVelocity";
 
+        public const string TerminalColor0Contract = TerminalTheme.Color0Contract;
+        public const string TerminalColor1Contract = TerminalTheme.Color1Contract;
+
         [Export(ChromeBackgroundContract)]
         public Configurable<Brush> ChromeBackground { get; }
         [Export(ChromeTextContract)]
@@ -34,6 +37,10 @@ namespace TerminalVelocity.Direct2D
         public Configurable<Brush> ChromeCloseButton { get; }
         [Export(LogoContract)]
         public Configurable<Brush> Logo { get; }
+        [Export(TerminalColor0Contract)]
+        public Configurable<Brush> TerminalColor0 { get; }
+        [Export(TerminalColor1Contract)]
+        public Configurable<Brush> TerminalColor1 { get; }
 
         private readonly DeviceContext _deviceContext;
 
@@ -47,6 +54,8 @@ namespace TerminalVelocity.Direct2D
             [Import(WindowTheme.ChromeRestoreButtonContract)] Configurable<System.Drawing.Color> chromeRestoreButton,
             [Import(WindowTheme.ChromeCloseButtonContract)] Configurable<System.Drawing.Color> chromeCloseButton,
             [Import(WindowTheme.LogoContract)] Configurable<System.Drawing.Color> logo,
+            [Import(TerminalTheme.Color0Contract)] Configurable<System.Drawing.Color> terminalColor0,
+            [Import(TerminalTheme.Color1Contract)] Configurable<System.Drawing.Color> terminalColor1,
             [Import] DeviceContext deviceContext)
         {
             _deviceContext = deviceContext ?? throw new ArgumentNullException(nameof(deviceContext));
@@ -59,6 +68,8 @@ namespace TerminalVelocity.Direct2D
             ChromeRestoreButton = chromeRestoreButton.Select(SolidColorBrush);
             ChromeCloseButton = chromeCloseButton.Select(SolidColorBrush);
             Logo = logo.Select(SolidColorBrush);
+            TerminalColor0 = terminalColor0.Select(SolidColorBrush);
+            TerminalColor1 = terminalColor1.Select(SolidColorBrush);
         }
 
         private Brush SolidColorBrush(System.Drawing.Color color)

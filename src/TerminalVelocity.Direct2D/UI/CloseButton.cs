@@ -24,8 +24,7 @@ namespace TerminalVelocity.Direct2D.UI
 
         private readonly Configurable<Brush> _hoverBrush;
         private readonly Geometry _geometry;
-
-        private bool _isMaximized;
+        
 
         [ImportingConstructor]
         public CloseButton(

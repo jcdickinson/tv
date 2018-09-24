@@ -26,6 +26,8 @@ namespace TerminalVelocity.Direct2D.UI
         private readonly NCButton _closeButton;
         private readonly SysMenu _sysMenu;
 
+        private readonly GridView _grid;
+
         private RectangleF _frame;
         private RectangleF _sizeFrame;
         private RectangleF _title;
@@ -46,7 +48,8 @@ namespace TerminalVelocity.Direct2D.UI
             [Import] MinButton minButton,
             [Import] MinMaxButton maxButton,
             [Import] CloseButton closeButton,
-            [Import] SysMenu sysMenu)
+            [Import] SysMenu sysMenu,
+            [Import] GridView grid)
         {
             _chromeBackground = chromeBackground;
             _chromeText = chromeText;
@@ -59,6 +62,7 @@ namespace TerminalVelocity.Direct2D.UI
             _minButton = minButton;
             _maxButton = maxButton;
             _closeButton = closeButton;
+            _grid = grid;
             
             _context = context;
             _frameTimer = Stopwatch.StartNew();
@@ -92,10 +96,13 @@ namespace TerminalVelocity.Direct2D.UI
             _minButton.Layout(_captionFrame);
             _maxButton.Layout(_captionFrame);
             _closeButton.Layout(_captionFrame);
+            _grid.Layout(_client);
         }
 
         internal void HitTest(ref HitTestEvent evt)
         {
+            _grid.HitTest(ref evt);
+
             if (_captionFrame.Contains(evt.Point) && !evt.IsInBounds)
                 evt.Region = WinApi.User32.HitTestResult.HTCAPTION;
                 
@@ -135,6 +142,8 @@ namespace TerminalVelocity.Direct2D.UI
 
         public void Render()
         {
+            _grid.Render();
+
             _context.Transform = Matrix3x2.Identity;
 
             _context.FillRectangle(RectangleFUtils.Rect(
