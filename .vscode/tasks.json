@@ -7,7 +7,7 @@
             "type": "process",
             "args": [
                 "build",
-                "${workspaceFolder}/src/TerminalVelocity/TerminalVelocity.csproj"
+                "${workspaceFolder}/src/TerminalVelocity.Direct2D/TerminalVelocity.Direct2D.csproj"
             ],
             "problemMatcher": "$msCompile"
         }

@@ -1,12 +1,11 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
-using TerminalVelocity.Direct2D;
-using WinApi.User32;
-using WinApi.Windows;
+using System.Composition;
 
 namespace TerminalVelocity.Terminal
 {
+    [Export]
     public class Grid : IEnumerable<Row>
     {
         public struct RowEnumerator : IEnumerator<Row>

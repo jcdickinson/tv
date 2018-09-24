@@ -1,13 +1,43 @@
+using System.Composition;
 using SharpDX;
 using SharpDX.Direct2D1;
 
-namespace TerminalVelocity.Direct2D.UI
+namespace TerminalVelocity.Direct2D
 {
-    internal static class IconFactory
+    [Shared]
+    public class IconProvider
     {
         // TODO: SVG
+        
+        public const string MinButtonContract = BrushProvider.ChromeMinButtonContract;
+        public const string MaxButtonContract = BrushProvider.ChromeMaxButtonContract;
+        public const string RestoreButtonContract = BrushProvider.ChromeRestoreButtonContract;
+        public const string CloseButtonContract = BrushProvider.ChromeCloseButtonContract;
+        public const string LogoContract = BrushProvider.LogoContract;
 
-        public static Geometry MinButton(SharpDX.Direct2D1.Factory factory)
+        [Export(MinButtonContract)]
+        public Geometry MinButton { get; }
+        [Export(MaxButtonContract)]
+        public Geometry MaxButton { get; }
+        [Export(RestoreButtonContract)]
+        public Geometry RestoreButton { get; }
+        [Export(CloseButtonContract)]
+        public Geometry CloseButton { get; }
+        [Export(LogoContract)]
+        public Geometry Logo { get; }
+
+        [ImportingConstructor]
+        public IconProvider(
+            [Import] SharpDX.Direct2D1.Factory factory)
+        {
+            MinButton = CreateMinButton(factory);
+            MaxButton = CreateMaxButton(factory);
+            RestoreButton = CreateRestoreButton(factory);
+            CloseButton = CreateCloseButton(factory);
+            Logo = CreateLogo(factory);
+        }
+
+        private static Geometry CreateMinButton(SharpDX.Direct2D1.Factory factory)
         {
             var result = new PathGeometry(factory);
             using (var sink = result.Open())
@@ -22,7 +52,7 @@ namespace TerminalVelocity.Direct2D.UI
             return result;
         }
 
-        public static Geometry MaxButton(SharpDX.Direct2D1.Factory factory)
+        private static Geometry CreateMaxButton(SharpDX.Direct2D1.Factory factory)
         {
             var result = new PathGeometry(factory);
             using (var sink = result.Open())
@@ -39,7 +69,7 @@ namespace TerminalVelocity.Direct2D.UI
             return result;
         }
 
-        public static Geometry RestoreButton(SharpDX.Direct2D1.Factory factory)
+        private static Geometry CreateRestoreButton(SharpDX.Direct2D1.Factory factory)
         {
             var result = new PathGeometry(factory);
             using (var sink = result.Open())
@@ -63,7 +93,7 @@ namespace TerminalVelocity.Direct2D.UI
             return result;
         }
         
-        public static Geometry CloseButton(SharpDX.Direct2D1.Factory factory)
+        private static Geometry CreateCloseButton(SharpDX.Direct2D1.Factory factory)
         {
             var result = new PathGeometry(factory);
             using (var sink = result.Open())
@@ -82,7 +112,7 @@ namespace TerminalVelocity.Direct2D.UI
             return result;
         }
         
-        public static Geometry AppIcon(SharpDX.Direct2D1.Factory factory)
+        private static Geometry CreateLogo(SharpDX.Direct2D1.Factory factory)
         {
             var result = new PathGeometry(factory);
             using (var sink = result.Open())
