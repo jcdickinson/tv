@@ -2,12 +2,11 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Linq.Expressions;
-using System.Reflection;
 
 namespace TerminalVelocity.VT
 {
     // https://github.com/jwilm/vte/blob/master/src/table.rs.in
-    
+
     internal static class VTStateActionExtensions
     {
         private struct StateChangeDescriptor
@@ -174,6 +173,19 @@ namespace TerminalVelocity.VT
                 (0x40, 0x7E, VTParserState.Ground)
             ));
 
+            cases.AddRange(CreateStateCase(VTParserState.CsiParam,
+                (0x00, 0x17, VTParserAction.Execute),
+                (0x19, VTParserAction.Execute),
+                (0x1C, 0x1F, VTParserAction.Execute),
+                (0x7F, VTParserAction.Ignore),
+                (0x3B, VTParserAction.Param),
+                (0x3A, VTParserState.CsiIgnore),
+                (0x30, 0x39, VTParserAction.Param),
+                (0x3C, 0x3F, VTParserState.CsiIgnore),
+                (0x20, 0x2F, VTParserState.CsiIntermediate, VTParserAction.Collect),
+                (0x40, 0x7E, VTParserState.Ground, VTParserAction.CsiDispatch)
+            ));
+
             cases.AddRange(CreateStateCase(VTParserState.CsiIntermediate,
                 (0x00, 0x17, VTParserAction.Execute),
                 (0x19, VTParserAction.Execute),
@@ -207,7 +219,7 @@ namespace TerminalVelocity.VT
                 (0x40, 0x7E, VTParserState.DcsPassthrough)
             ));
 
-            cases.AddRange(CreateStateCase(VTParserState.DcsIntermediate,
+            cases.AddRange(CreateStateCase(VTParserState.DcsIgnore,
                 (0x00, 0x17, VTParserAction.Ignore),
                 (0x19, VTParserAction.Ignore),
                 (0x1C, 0x1F, VTParserAction.Ignore),
@@ -276,23 +288,7 @@ namespace TerminalVelocity.VT
         }
 
         public static VTStateAction GetStateChange(this VTParserState state, byte next)
-        {
-            var key = (ushort)((ushort)state << 8 | next);
-            var result = StateChange(key);
-            return result;
-            if (result.State == VTParserState.Anywhere)
-                result = result.WithState(state);
-            return result;
-        }
-
-        public static VTStateAction GetStateChange(this VTStateAction stateAction, byte next)
-        {
-            var result = GetStateChange(stateAction.State, next);
-            return result;
-            if (result.Action == VTParserAction.None)
-                result = result.WithAction(stateAction.Action);
-            return result;
-        }
+            =>  StateChange((ushort)((ushort)state << 8 | next));
 
         public static VTStateAction WithEntryAction(this VTStateAction stateAction)
             => stateAction.WithAction(EntryActions[(byte)stateAction.State]);

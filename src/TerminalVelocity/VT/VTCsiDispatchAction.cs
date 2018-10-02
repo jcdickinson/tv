@@ -9,20 +9,20 @@ namespace TerminalVelocity.VT
 
         public ReadOnlySpan<byte> Intermediates { get; }
 
-        public bool IntermediatesIgnored { get; }
+        public VTIgnore Ignored { get; }
 
         public ReadOnlySpan<long> Parameters { get; }
 
         public VTCsiDispatchAction(
             ReadOnlySpan<byte> intermediates,
             ReadOnlySpan<long> parameters,
-            bool ignored,
+            VTIgnore ignored,
             char character)
         {
             Character = character;
             Intermediates = intermediates;
             Parameters = parameters;
-            IntermediatesIgnored = ignored;
+            Ignored = ignored;
         }
 
         public override string ToString()
@@ -39,6 +39,9 @@ namespace TerminalVelocity.VT
                 sb.Append(i == 0 ? string.Empty : "; ");
                 sb.Append(Parameters[i].ToString("x2"));
             }
+            
+            if (Ignored.HasFlag(VTIgnore.Parameters))
+                sb.Append(Parameters.Length > 0 ? "; ignored" : "ignored");
 
             sb.Append(")");
 
@@ -48,7 +51,7 @@ namespace TerminalVelocity.VT
                 sb.Append(Intermediates[i].ToString("x2"));
             }
 
-            if (IntermediatesIgnored)
+            if (Ignored.HasFlag(VTIgnore.Intermediates))
                 sb.Append(Intermediates.Length > 0 ? "; ignored" : " ignored");
 
             return sb.ToString();

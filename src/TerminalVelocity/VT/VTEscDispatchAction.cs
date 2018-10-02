@@ -9,36 +9,23 @@ namespace TerminalVelocity.VT
 
         public ReadOnlySpan<byte> Intermediates { get; }
 
-        public ReadOnlySpan<long> Parameters { get; }
-
-        public bool IntermediatesIgnored { get; }
+        public VTIgnore Ignored { get; }
 
         public VTEscDispatchAction(
             ReadOnlySpan<byte> intermediates,
-            ReadOnlySpan<long> parameters,
-            bool ignored,
+            VTIgnore ignored,
             byte @byte)
         {
             Byte = @byte;
             Intermediates = intermediates;
-            Parameters = parameters;
-            IntermediatesIgnored = ignored;
+            Ignored = ignored;
         }
         
         public override string ToString()
         {
             var sb = new StringBuilder("ESC Dispatch ");
 
-            sb.Append(((int)Byte).ToString("x2"))
-                .Append(" (");
-
-            for (var i = 0; i < Parameters.Length; i++)
-            {
-                sb.Append(i == 0 ? string.Empty : "; ");
-                sb.Append(Parameters[i].ToString("x2"));
-            }
-
-            sb.Append(")");
+            sb.Append(((int)Byte).ToString("x2"));
 
             for (var i = 0; i < Intermediates.Length; i++)
             {
@@ -46,7 +33,7 @@ namespace TerminalVelocity.VT
                 sb.Append(Intermediates[i].ToString("x2"));
             }
 
-            if (IntermediatesIgnored)
+            if (Ignored.HasFlag(VTIgnore.Intermediates))
                 sb.Append(Intermediates.Length > 0 ? "; ignored" : " ignored");
 
             return sb.ToString();

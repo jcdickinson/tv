@@ -11,6 +11,6 @@ namespace TerminalVelocity.VT
             Byte = @byte;
         }
         
-        public override string ToString() => FormattableString.Invariant($"Print 0x{(int)Byte:x2}");
+        public override string ToString() => FormattableString.Invariant($"Put {(int)Byte:x2}");
     }
 }

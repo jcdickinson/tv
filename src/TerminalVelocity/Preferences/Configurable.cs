@@ -57,22 +57,20 @@ namespace TerminalVelocity.Preferences
             return new Configurable<TValue, TOther, TResult>(this, other, selector);
         }
 
-        public Configurable<(TValue, TOther)> Join<TOther>(Configurable<TOther> other)
-        {
-            if (other == null) throw new ArgumentNullException(nameof(other));
-            return new Configurable<TValue, TOther, (TValue, TOther)>(this, other, Zip);
-        }
+        public virtual void Reset() => Reset(0);
 
-        private static (TValue, TOther) Zip<TOther>(TValue first, TOther second) => (first, second);
-
-        public virtual void Reset()
+        private void Reset(int newState)
         {
-            if (_state == 1) 
+            if (_state != -1)
             {
                 var oldValue = _value;
                 _value = default;
 
-                _state = 0;
+                _state = newState;
+
+                var reset = Interlocked.CompareExchange(ref ValueReset, null, null);
+                reset?.Invoke();
+                
                 if (oldValue is IDisposable disposable)
                     disposable.Dispose();
             }
@@ -80,12 +78,8 @@ namespace TerminalVelocity.Preferences
 
         public void Dispose()
         {
-            if (_state != 0 && _value is IDisposable disposable)
-            {
-                _value = default;
-                _state = -1;
-                disposable.Dispose();
-            }
+            if (_state != 0)
+                Reset(-1);
         }
 
         public static implicit operator TValue (Configurable<TValue> value) => value.Value;
@@ -96,21 +90,44 @@ namespace TerminalVelocity.Preferences
     [Shared]
     internal class Configurable<TValue, TResult> : Configurable<TResult>
     {
+        private readonly Configurable<TValue> _source;
         public Configurable(Configurable<TValue> source, Func<TValue, TResult> factory)
             : base(() => factory(source.Value))
         {
-            source.ValueReset += Reset;
+            _source = source ?? throw new ArgumentNullException(nameof(source));
+            _source.ValueReset += Reset;
+        }
+
+        public override void Reset()
+        {
+            if (_source.IsDisposed)
+                base.Dispose();
+            else
+                base.Reset(); 
         }
     }
 
     [Shared]
     internal class Configurable<TFirst, TSecond, TResult> : Configurable<TResult>
     {
+        private readonly Configurable<TFirst> _first;
+        private readonly Configurable<TSecond> _second;
+
         public Configurable(Configurable<TFirst> first, Configurable<TSecond> second, Func<TFirst, TSecond, TResult> factory)
             : base(() => factory(first.Value, second.Value))
         {
-            first.ValueReset += Reset;
-            second.ValueReset += Reset;
+            _first = first ?? throw new ArgumentNullException(nameof(first));
+            _second = second ?? throw new ArgumentNullException(nameof(second));
+            _first.ValueReset += Reset;
+            _second.ValueReset += Reset;
+        }
+
+        public override void Reset()
+        {
+            if (_first.IsDisposed || _second.IsDisposed)
+                base.Dispose();
+            else
+                base.Reset(); 
         }
     }
 }

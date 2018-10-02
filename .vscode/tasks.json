@@ -3,6 +3,8 @@
     "tasks": [
         {
             "label": "build",
+            "identifier": "build",
+            "group": "build",
             "command": "dotnet",
             "type": "process",
             "args": [
@@ -14,12 +16,14 @@
         {
             "label": "tests",
             "identifier": "tests",
-            "isBackground": true,
-            "group": "build",
+            "group": "test",
             "command": "dotnet",
             "type": "process",
             "args": [
-                "build",
+                "test",
+                "/p:CollectCoverage=true",
+                "/p:CoverletOutputFormat=lcov",
+                "/p:CoverletOutput=../../lcov.info",
                 "${workspaceFolder}/src/TerminalVelocity.Tests/TerminalVelocity.Tests.csproj"
             ],
             "problemMatcher": "$msCompile"
