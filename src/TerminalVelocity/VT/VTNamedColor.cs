@@ -1,0 +1,36 @@
+namespace TerminalVelocity.VT
+{
+    public enum VTNamedColor : short
+    {
+        Black = 0,
+        Red,
+        Green,
+        Yellow,
+        Blue,
+        Magenta,
+        Cyan,
+        White,
+        BrightBlack,
+        BrightRed,
+        BrightGreen,
+        BrightYellow,
+        BrightBlue,
+        BrightMagenta,
+        BrightCyan,
+        BrightWhite,
+        Foreground = 256,
+        Background,
+        CursorText,
+        Cursor,
+        DimBlack,
+        DimRed,
+        DimGreen,
+        DimYellow,
+        DimBlue,
+        DimMagenta,
+        DimCyan,
+        DimWhite,
+        BrightForeground,
+        DimForeground,
+    }
+}

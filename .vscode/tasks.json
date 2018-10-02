@@ -10,6 +10,19 @@
                 "${workspaceFolder}/src/TerminalVelocity.Direct2D/TerminalVelocity.Direct2D.csproj"
             ],
             "problemMatcher": "$msCompile"
+        },
+        {
+            "label": "tests",
+            "identifier": "tests",
+            "isBackground": true,
+            "group": "build",
+            "command": "dotnet",
+            "type": "process",
+            "args": [
+                "build",
+                "${workspaceFolder}/src/TerminalVelocity.Tests/TerminalVelocity.Tests.csproj"
+            ],
+            "problemMatcher": "$msCompile"
         }
     ]
 }

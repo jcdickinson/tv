@@ -64,7 +64,7 @@ namespace TerminalVelocity.Direct2D.UI
                 origin.Y += layout.Metrics.Height;
             }
 
-            OnRender.Publish(new RenderEvent());
+            //OnRender.Publish(new RenderEvent());
         }
     }
 }
