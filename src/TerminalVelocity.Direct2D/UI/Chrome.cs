@@ -35,6 +35,7 @@ namespace TerminalVelocity.Direct2D.UI
         private RectangleF _client;
         
         private Stopwatch _frameTimer;
+        private float _fpsMovingAverage;
 
         [ImportingConstructor]
         public Chrome(
@@ -157,11 +158,10 @@ namespace TerminalVelocity.Direct2D.UI
             var text = "Terminal Velocity";
             if (_displayFps)
             {
-                var fps = _frameTimer.Elapsed.TotalMilliseconds;
-                if (fps <= 0)
-                    text += " - ∞fps";
-                else
-                    text += $" - {1000F / fps:0.00}fps";
+                var fps = (float)_frameTimer.ElapsedTicks;
+                fps = fps == 0 ? 0 : Stopwatch.Frequency / fps;
+                _fpsMovingAverage = (_fpsMovingAverage * 0.9f) + (fps * 0.1f);
+                text += $" - {_fpsMovingAverage:0}fps";
                 _frameTimer.Restart();
             }
 

@@ -16,6 +16,34 @@ namespace TerminalVelocity.Direct2D
     [Shared, Export]
     public sealed class Application : IDisposable
     {
+        private sealed class OneLengthConcurrentQueue<T>
+        {
+            private sealed class Box
+            {
+                public readonly T Value;
+                public Box(T value) => Value = value;
+            }
+
+            private volatile Box _box;
+            public OneLengthConcurrentQueue() {}
+
+            public void Enqueue(T value) => _box = new Box(value);
+            public bool TryDequeue(out T value)
+            {
+                var box = Interlocked.Exchange(ref _box, null);
+                if (box is null)
+                {
+                    value = default;
+                    return false;
+                }
+                else
+                {
+                    value = box.Value;
+                    return true;
+                }
+            }
+        }
+
         private readonly Dx11Component _component;
         private readonly RenderWindow _renderWindow;
         private readonly DeviceContext _context;
@@ -23,9 +51,8 @@ namespace TerminalVelocity.Direct2D
         private readonly Lazy<SceneRoot> _sceneRoot;
 
         private readonly AutoResetEvent _renderReceived = new AutoResetEvent(false);
-        private readonly object _lockStep = new object();
-        private volatile bool _isRendering;
-        private volatile bool _needRender;
+        private readonly OneLengthConcurrentQueue<SizeEvent> _size = new OneLengthConcurrentQueue<SizeEvent>();
+
         private volatile int _result;
 
         [ImportingConstructor]
@@ -57,8 +84,6 @@ namespace TerminalVelocity.Direct2D
 
             while ((_result = User32Methods.GetMessage(out var message, window.Handle, 0, 0)) > 0)
             {
-                //Console.WriteLine((WM)message.Value);
-
                 User32Methods.TranslateMessage(ref message);
                 User32Methods.DispatchMessage(ref message);
 
@@ -66,12 +91,6 @@ namespace TerminalVelocity.Direct2D
                 {
                     _result = 0;
                     break;
-                }
-
-                if (_needRender)
-                {
-                    _needRender = false;
-                    _renderReceived.Set();
                 }
             }
 
@@ -88,74 +107,31 @@ namespace TerminalVelocity.Direct2D
             {
                 if (_renderReceived.WaitOne(100) && _result >= 0)
                 {
-                    // Yield control back to the main thread and set the semaphore to try again.
+                    if (_size.TryDequeue(out var size))
+                        _component.Resize(size.Size);
+                        
+                    _context.BeginDraw();
+                    _context.Clear(new Color4(0, 0, 0, 0));
 
-                    if (User32Helpers.PeekMessage(
-                        out var tmp,
-                        _renderWindow.Handle,
-                        0,
-                        0,
-                        PeekMessageFlags.PM_NOREMOVE | PeekMessageFlags.PM_NOYIELD) ||
-                        !Render())
-                        _needRender = true;
+                    _sceneRoot.Value.OnRender();
+
+                    _context.EndDraw();
+                    if (_result > 0)
+                        _swapChain.Present(1, SharpDX.DXGI.PresentFlags.None);
                 }
             }
-        }
-
-        private bool Render()
-        {
-            // If the lock is taken, then something else is currently rendering.
-            if (Monitor.TryEnter(_lockStep))
-            {
-                try
-                {
-                    if (_isRendering)
-                        return false;
-
-                    try
-                    {
-                        _isRendering = true;
-                        _context.BeginDraw();
-                        _context.Clear(new Color4(0, 0, 0, 0));
-
-                        _sceneRoot.Value.OnRender();
-
-                        _context.EndDraw();
-                        if (_result > 0)
-                            _swapChain.Present(1, SharpDX.DXGI.PresentFlags.None);
-                        return true;
-                    }
-                    finally
-                    {
-                        _isRendering = false;
-                    }
-                }
-                finally
-                {
-                    Monitor.Exit(_lockStep);
-                }
-            }
-            return false;
         }
 
         [Import(RenderEvent.ContractName)]
         public Event<RenderEvent> OnRender
         {
-            set => value.Subscribe((ref RenderEvent e) =>
-            {
-                // An update is still needed if the lock is taken.
-                if (!Render())
-                    _renderReceived.Set();
-            });
+            set => value.Subscribe((ref RenderEvent e) => _renderReceived.Set());
         }
 
         [Import(SizeEvent.ContractName)]
         public Event<SizeEvent> OnSize
         {
-            set => value.Subscribe((ref SizeEvent e) =>
-            {
-                lock (_lockStep) _component.Resize(e.Size);
-            });
+            set => value.Subscribe((ref SizeEvent e) => _size.Enqueue(e));
         }
 
         [Import(LayoutEvent.ContractName)]

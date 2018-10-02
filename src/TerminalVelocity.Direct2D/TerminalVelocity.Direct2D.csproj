@@ -1,20 +1,21 @@
 <Project Sdk="Microsoft.NET.Sdk">
-
   <PropertyGroup>
     <OutputType>Exe</OutputType>
     <TargetFramework>netcoreapp2.1</TargetFramework>
     <LangVersion>latest</LangVersion>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <TieredCompilation>true</TieredCompilation>
   </PropertyGroup>
-
   <ItemGroup>
     <PackageReference Include="WinApi.DxUtils" Version="4.0.0"/>
     <PackageReference Include="SharpDX.Direct3D11" Version="4.0.1"/>
     <PackageReference Include="SharpDX.Mathematics" Version="4.0.1"/>
     <PackageReference Include="Microsoft.Composition" Version="1.0.31"/>
+    <PackageReference Include="NSubsys" Version="0.7.0-build20180604-0047">
+      <PrivateAssets>all</PrivateAssets>
+    </PackageReference>
   </ItemGroup>
-
   <ItemGroup>
-    <ProjectReference Include="..\TerminalVelocity\TerminalVelocity.csproj" />
+    <ProjectReference Include="..\TerminalVelocity\TerminalVelocity.csproj"/>
   </ItemGroup>
 </Project>
