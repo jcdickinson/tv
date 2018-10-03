@@ -15,14 +15,12 @@ namespace TerminalVelocity.Direct2D
         private readonly WindowFactory _factory;
         private readonly Dx11Component _directX;
         private readonly IConstructionParams _constructionParams;
-        private readonly Configurable<System.Drawing.Size> _windowPadding;
 
         [ImportingConstructor]
         public RenderWindowProvider(
             [Import] CompositionHost host,
             [Import] Dx11Component directX,
-            [Import] IConstructionParams constructionParams,
-            [Import(WindowsMetricsProvider.WindowPaddingContract)] Configurable<System.Drawing.Size> windowPadding)
+            [Import] IConstructionParams constructionParams)
         {
             _factory = WindowFactory.Create(
                 className: "TerminalVelocity",
@@ -30,12 +28,11 @@ namespace TerminalVelocity.Direct2D
             _host = host;
             _directX = directX;
             _constructionParams = constructionParams;
-            _windowPadding = windowPadding;
         }
 
         private RenderWindow CreateWindow()
         {
-            var window = new RenderWindow(_directX, _windowPadding);
+            var window = new RenderWindow(_directX);
             _host.SatisfyImports(window);
             return window;
         }

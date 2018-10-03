@@ -108,8 +108,12 @@ namespace TerminalVelocity.Direct2D
                 if (_renderReceived.WaitOne(100) && _result >= 0)
                 {
                     if (_size.TryDequeue(out var size))
+                    {
                         _component.Resize(size.Size);
-                        
+                        var rectange = new RectangleF(0, 0, size.Size.Width, size.Size.Height);
+                        _sceneRoot.Value.OnLayout(rectange);
+                    }
+
                     _context.BeginDraw();
                     _context.Clear(new Color4(0, 0, 0, 0));
 
@@ -132,18 +136,6 @@ namespace TerminalVelocity.Direct2D
         public Event<SizeEvent> OnSize
         {
             set => value.Subscribe((ref SizeEvent e) => _size.Enqueue(e));
-        }
-
-        [Import(LayoutEvent.ContractName)]
-        public Event<LayoutEvent> OnLayout
-        {
-            set => value.Subscribe((ref LayoutEvent e) => _sceneRoot?.Value.OnLayout(ref e));
-        }
-
-        [Import(HitTestEvent.ContractName)]
-        public Event<HitTestEvent> OnHitTest
-        {
-            set => value.Subscribe((ref HitTestEvent e) => _sceneRoot?.Value.OnHitTest(ref e));
         }
 
         public void Dispose()

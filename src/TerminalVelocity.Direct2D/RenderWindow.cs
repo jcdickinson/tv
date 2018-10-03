@@ -16,14 +16,8 @@ namespace TerminalVelocity.Direct2D
     [Shared]
     public sealed class RenderWindow : EventedWindowCore
     {
-        [Import(HitTestEvent.ContractName)]
-        public Event<HitTestEvent> HitTest { private get; set; }
-
         [Import(MouseButtonEvent.ContractName)]
         public Event<MouseButtonEvent> MouseButton { private get; set; }
-
-        [Import(LayoutEvent.ContractName)]
-        public Event<LayoutEvent> Layout { private get; set; }
 
         [Import(RenderEvent.ContractName)]
         public Event<RenderEvent> Render { private get; set; }
@@ -38,16 +32,11 @@ namespace TerminalVelocity.Direct2D
         public Event<CloseEvent> Close { private get; set; }
 
         private readonly Dx11Component _directX;
-        private readonly Configurable<System.Drawing.Size> _windowPadding;
-
-        private bool _trackingMouse;
 
         public RenderWindow(
-            Dx11Component directX,
-            Configurable<System.Drawing.Size> windowPadding)
+            Dx11Component directX)
         {
             _directX = directX;
-            _windowPadding = windowPadding;
         }
 
         [Import(EmulateMessageEvent.ContractName)]
@@ -97,115 +86,15 @@ namespace TerminalVelocity.Direct2D
         {
             _directX.Initialize(Handle, GetClientSize());
             RedrawFrame();
+            SetText("Terminal Velocity");
 
             base.OnCreate(ref packet);
         }
 
         protected override void OnPaint(ref PaintPacket packet)
         {
-            RaiseLayout();
             Render.Publish(new RenderEvent());
             Validate();
-        }
-
-        private void RaiseLayout()
-        {
-            var size = GetClientSize();
-            var rectangle = new RectangleF(0, 0, size.Width, size.Height);
-
-            if (User32Methods.GetWindowPlacement(Handle, out var placement) &&
-                placement.ShowCmd == WinApi.User32.ShowWindowCommands.SW_MAXIMIZE)
-            {
-                rectangle.Left += _windowPadding.Value.Width * 2;
-                rectangle.Top += _windowPadding.Value.Height * 2;
-                rectangle.Width -= _windowPadding.Value.Width * 2;
-                rectangle.Height -= _windowPadding.Value.Height * 2;
-            }
-
-            Layout.Publish(new LayoutEvent(rectangle));
-        }
-
-        protected override void OnNcCalcSize(ref NcCalcSizePacket packet)
-        {
-            // Extend the client area into the frame.
-            if (packet.ShouldCalcValidRects)
-                packet.Result = WindowViewRegionFlags.WVR_DEFAULT;
-            else
-                base.OnNcCalcSize(ref packet);
-        }
-
-        private void RaiseHitTest()
-        {
-            User32Methods.GetCursorPos(out var mousePosition);
-            var position = this.GetWindowRect();
-            var result = RaiseHitTest(new Point(
-                mousePosition.X - position.Left,
-                mousePosition.Y - position.Top
-            ));
-        }
-
-        public HitTestEvent RaiseHitTest(Point windowRelative)
-        {
-            var result = new HitTestEvent(windowRelative);
-            HitTest.Publish(ref result);
-            return result;
-        }
-
-        protected override void OnNcHitTest(ref NcHitTestPacket packet)
-        {
-            if (!_trackingMouse)
-            {
-                // Set up notification for mouse enter/leave.
-
-                var options = new TrackMouseEventOptions()
-                {
-                    Size = (uint)Marshal.SizeOf<TrackMouseEventOptions>(),
-                    TrackedHwnd = Handle,
-                    Flags = TrackMouseEventFlags.TME_LEAVE
-                };
-                _trackingMouse = User32Methods.TrackMouseEvent(ref options);
-            }
-
-            var position = this.GetWindowRect();
-            var result = RaiseHitTest(new Point(
-                packet.Point.X - position.Left,
-                packet.Point.Y - position.Top
-            ));
-
-            if (result.IsInBounds)
-            {
-                // HACK: Windows doesn't handle this too well.
-                switch (result.Region)
-                {
-                    case WinApi.User32.HitTestResult.HTCLOSE:
-                    case WinApi.User32.HitTestResult.HTMAXBUTTON:
-                    case WinApi.User32.HitTestResult.HTMINBUTTON:
-                        packet.Result = WinApi.User32.HitTestResult.HTCLIENT;
-                        break;
-                    default:
-                        packet.Result = result.Region;
-                        break;
-                }
-            }
-            else
-            {
-                packet.Result = WinApi.User32.HitTestResult.HTCLIENT;
-            }
-        }
-
-        protected override void OnMouseLeave(ref Packet packet)
-        {
-            // Ensure that nothing thinks that the mouse is in the window.
-            _trackingMouse = false;
-            RaiseHitTest();
-        }
-
-        protected override void OnMouseButton(ref MouseButtonPacket packet)
-        {
-            var evt = new MouseButtonEvent(packet);
-            MouseButton.Publish(ref evt);
-            if (!evt.IsHandled)
-                base.OnMouseButton(ref packet);
         }
     }
 }

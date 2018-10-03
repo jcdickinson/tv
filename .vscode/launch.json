@@ -6,7 +6,7 @@
             "type": "coreclr",
             "request": "launch",
             "preLaunchTask": "build",
-            "program": "${workspaceFolder}/src/TerminalVelocity.Direct2D/bin/Debug/netcoreapp2.1/TerminalVelocity.Direct2D.dll",
+            "program": "${workspaceFolder}/src/TerminalVelocity.Direct2D/bin/Debug/netcoreapp2.1/tv.dll",
             "args": [],
             "cwd": "${workspaceFolder}/src/TerminalVelocity.Direct2D",
             "console": "internalConsole",

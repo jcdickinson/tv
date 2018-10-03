@@ -44,12 +44,6 @@ namespace TerminalVelocity.Direct2D.UI
             _frame = container;
         }
 
-        public void HitTest(ref HitTestEvent payload)
-        {
-            if (_frame.Contains(payload.Point))
-                payload.Region = WinApi.User32.HitTestResult.HTCLIENT;
-        }
-
         public void Render()
         {
             _context.Transform = Matrix3x2.Identity;

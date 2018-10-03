@@ -8,11 +8,6 @@ namespace TerminalVelocity.Direct2D.Events
     {
         [Export(Events.CloseEvent.ContractName)]
         public Event<CloseEvent> CloseEvent { get; } = new Event<CloseEvent>();
-        [Export(Events.HitTestEvent.ContractName)]
-        public Event<HitTestEvent> HitTestEvent { get; } = new Event<HitTestEvent>();
-        
-        [Export(Events.LayoutEvent.ContractName)]
-        public Event<LayoutEvent> LayoutEvent  { get; } = new Event<LayoutEvent>();
         
         [Export(Events.MouseButtonEvent.ContractName)]
         public Event<MouseButtonEvent> MouseButtonEvent { get; } = new Event<MouseButtonEvent>();

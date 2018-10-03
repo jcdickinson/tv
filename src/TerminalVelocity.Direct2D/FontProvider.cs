@@ -10,11 +10,8 @@ namespace TerminalVelocity.Direct2D
     [Shared]
     public class FontProvider
     {
-        public const string CaptionTextContract = WindowsMetricsProvider.CaptionTextContract;
         public const string TerminalTextContract = TerminalTheme.FontContract;
 
-        [Export(CaptionTextContract)]
-        public Configurable<TextFormat> CaptionTextTextFormat { get; }
         [Export(TerminalTextContract)]
         public Configurable<TextFormat> TerminalText { get; }
 
@@ -23,14 +20,11 @@ namespace TerminalVelocity.Direct2D
         [ImportingConstructor]
         public FontProvider(
             [Import] Factory factory,
-            [Import(WindowsMetricsProvider.CaptionTextContract)] Configurable<string> captionTextFamily,
-            [Import(WindowsMetricsProvider.CaptionTextContract)] Configurable<Size> captionTextSize,
             [Import(TerminalTheme.FontContract)] Configurable<string> terminalTextFamily,
             [Import(TerminalTheme.FontContract)] Configurable<int> terminalTextSize
         )
         {
             _factory = factory;
-            CaptionTextTextFormat = captionTextFamily.Join(captionTextSize, TextFormat);
             TerminalText = terminalTextFamily.Join(terminalTextSize, TextFormat);
         }
 

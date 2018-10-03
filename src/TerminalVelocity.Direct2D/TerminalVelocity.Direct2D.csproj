@@ -5,6 +5,7 @@
     <LangVersion>latest</LangVersion>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     <TieredCompilation>true</TieredCompilation>
+    <AssemblyName>tv</AssemblyName>
   </PropertyGroup>
   <ItemGroup>
     <PackageReference Include="WinApi.DxUtils" Version="4.0.0"/>

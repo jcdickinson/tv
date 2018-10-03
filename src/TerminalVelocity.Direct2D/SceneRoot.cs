@@ -12,20 +12,18 @@ namespace TerminalVelocity.Direct2D
     [Shared, Export]
     public class SceneRoot
     {
-        private Chrome _chrome;
+        private GridView _grid;
 
         [ImportingConstructor]
         public SceneRoot(
-            [Import] Chrome chrome
+            [Import] GridView chrome
         )
         {
-            _chrome = chrome;
+            _grid = chrome;
         }
 
-        public void OnRender() => _chrome.Render();
+        public void OnRender() => _grid.Render();
 
-        public void OnLayout(ref LayoutEvent e) => _chrome.Layout(in e.NewSize);
-        
-        public void OnHitTest(ref HitTestEvent e) => _chrome.HitTest(ref e);
+        public void OnLayout(in RectangleF rectangle) => _grid.Layout(rectangle);
     }
 }
