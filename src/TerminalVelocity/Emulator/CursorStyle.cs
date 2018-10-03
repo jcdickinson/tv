@@ -1,6 +1,6 @@
-namespace TerminalVelocity.VT
+namespace TerminalVelocity.Emulator
 {
-    public enum VTCursorStyle : byte
+    public enum CursorStyle : byte
     {
         Block,
         Underline,

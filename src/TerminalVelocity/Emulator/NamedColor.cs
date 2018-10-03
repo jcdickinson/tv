@@ -1,6 +1,6 @@
-namespace TerminalVelocity.VT
+namespace TerminalVelocity.Emulator
 {
-    public enum VTNamedColor : short
+    public enum NamedColor : short
     {
         Black = 0,
         Red,

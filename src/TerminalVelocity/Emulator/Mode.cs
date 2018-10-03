@@ -1,6 +1,6 @@
-namespace TerminalVelocity.VT
+namespace TerminalVelocity.Emulator
 {
-    public enum VTMode
+    public enum Mode
     {
         CursorKeys = 1,
         DECCOLM = 3,

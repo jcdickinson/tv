@@ -1,6 +1,6 @@
-namespace TerminalVelocity.VT
+namespace TerminalVelocity.Emulator
 {
-    public enum VTClearMode : byte
+    public enum ClearMode : byte
     {
         Below,
         Above,
