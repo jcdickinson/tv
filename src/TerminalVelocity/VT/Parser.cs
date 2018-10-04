@@ -1,10 +1,13 @@
 using System;
+using System.Composition;
+using TerminalVelocity.VT.Events;
 
 namespace TerminalVelocity.VT
 {
     // https://github.com/jwilm/vte/blob/master/src/lib.rs
 
-    public sealed class VTParser
+    [Shared]
+    public sealed class Parser
     {
         [Flags]
         private enum ParseOptions : byte
@@ -15,13 +18,37 @@ namespace TerminalVelocity.VT
             IgnoringParameters = 0b0000_00010,
             Ignoring = IgnoringIntermediates | IgnoringParameters
         }
+        
+        [Import(ControlSequenceEvent.ContractName)]
+        public Event<ControlSequenceEvent> ControlSequence { private get; set; }
+        
+        [Import(EscapeSequenceEvent.ContractName)]
+        public Event<EscapeSequenceEvent> EscapeSequence { private get; set; }
+        
+        [Import(ExecuteEvent.ContractName)]
+        public Event<ExecuteEvent> Execute { private get; set; }
 
-        private VTParserState _state = VTParserState.Ground;
+        [Import(HookEvent.ContractName)]
+        public Event<HookEvent> Hook { private get; set; }
+
+        [Import(OsCommandEvent.ContractName)]
+        public Event<OsCommandEvent> OsCommand { private get; set; }
+
+        [Import(PrintEvent.ContractName)]
+        public Event<PrintEvent> Print { private get; set; }
+
+        [Import(PutEvent.ContractName)]
+        public Event<PutEvent> Put { private get; set; }
+        
+        [Import(UnhookEvent.ContractName)]
+        public Event<UnhookEvent> Unhook { private get; set; }
+
+        private ParserState _state;
         private readonly byte[] _intermediates;
         private readonly long[] _params;
         private readonly ReadOnlyMemory<byte>[] _oscParams;
         private readonly byte[] _oscRaw;
-        private readonly IVTEventSink _eventSink;
+        private readonly ParserUtf8 _utf8;
 
         private ParseOptions _options;
         private int _intermediateIndex;
@@ -30,23 +57,23 @@ namespace TerminalVelocity.VT
         private int _oscIndex;
         private int _previousOscEnd;
         private int _oscNumParams;
-        private Utf8 _utf8;
 
-        public VTParser(IVTEventSink eventSink, int maxIntermediates = 2, int maxOscRaw = 1024, int maxParams = 16)
+        public Parser(
+            int maxIntermediates = 2,
+            int maxOscRaw = 1024,
+            int maxParams = 16)
         {
-            if (eventSink == null) throw new ArgumentNullException(nameof(eventSink));
             if (maxIntermediates < 0) throw new ArgumentOutOfRangeException(nameof(maxIntermediates));
             if (maxOscRaw < 0) throw new ArgumentOutOfRangeException(nameof(maxOscRaw));
             if (maxParams < 0) throw new ArgumentOutOfRangeException(nameof(maxParams));
 
-            _state = VTParserState.Ground;
-            _eventSink = eventSink;
+            _state = ParserState.Ground;
             _intermediates = new byte[maxIntermediates];
             _params = new long[maxParams];
             _oscRaw = new byte[maxOscRaw];
             _oscParams = new ReadOnlyMemory<byte>[maxParams];
 
-            _utf8 = new Utf8(true);
+            _utf8 = new ParserUtf8(true);
         }
 
         public void Process(ReadOnlySpan<byte> next)
@@ -57,7 +84,7 @@ namespace TerminalVelocity.VT
 
         public void Process(byte next)
         {
-            if (_state == VTParserState.Utf8)
+            if (_state == ParserState.Utf8)
             {
                 ProcessUtf8(next);
                 return;
@@ -65,7 +92,7 @@ namespace TerminalVelocity.VT
 
             // Handle state changes in the anywhere state before evaluating changes
             // for current state.
-            var change = VTParserState.Anywhere.GetStateChange(next);
+            var change = ParserState.Anywhere.GetStateChange(next);
             if (change.IsEmpty)
                 change = _state.GetStateChange(next);
 
@@ -77,28 +104,28 @@ namespace TerminalVelocity.VT
             if (!_utf8.Process(next, out var result))
                 return;
 
-            _eventSink.OnPrint(new VTPrintAction(result));
-            _state = VTParserState.Ground;
+            Print.Publish(new PrintEvent(result));
+            _state = ParserState.Ground;
         }
 
-        private void PerformChange(VTStateAction change, byte next)
+        private void PerformChange(ParserStateAction change, byte next)
         {
-            if (change.State == VTParserState.Anywhere)
+            if (change.State == ParserState.Anywhere)
             {
                 PerformAction(change, next);
                 return;
             }
 
-            PerformAction(new VTStateAction(_state).WithExitAction(), 0);
+            PerformAction(new ParserStateAction(_state).WithExitAction(), 0);
             PerformAction(change, next);
             PerformAction(change.WithEntryAction(), 0);
-            if (change.State != VTParserState.Anywhere)
+            if (change.State != ParserState.Anywhere)
                 _state = change.State;
         }
 
-        private void PerformAction(VTStateAction change, byte next)
+        private void PerformAction(ParserStateAction change, byte next)
         {
-            if (change.Action == VTParserAction.None)
+            if (change.Action == ParserAction.None)
                 return;
 
             System.Diagnostics.Debug.WriteLine(change);
@@ -107,34 +134,34 @@ namespace TerminalVelocity.VT
 
             switch (action)
             {
-                case VTParserAction.Print:
-                    _eventSink.OnPrint(new VTPrintAction(_utf8.Provide(next)));
+                case ParserAction.Print:
+                    Print.Publish(new PrintEvent(_utf8.Provide(next)));
                     return;
-                case VTParserAction.Execute:
-                    _eventSink.OnExecute(new VTExecuteAction((VTControlCode)next));
+                case ParserAction.Execute:
+                    Execute.Publish(new ExecuteEvent((ControlCode)next));
                     return;
-                case VTParserAction.Hook:
+                case ParserAction.Hook:
                     if (_options.HasFlag(ParseOptions.CollectingParameters))
                         _params[_numParams++] = _param;
                         
-                    _eventSink.OnHook(new VTHookAction(
-                        _params.AsSpan(0, _numParams), 
-                        _intermediates.AsSpan(0, _intermediateIndex), 
-                        (VTIgnore)(byte)(_options & ParseOptions.Ignoring)));
+                    Hook.Publish(new HookEvent(
+                        _params.AsMemory(0, _numParams), 
+                        _intermediates.AsMemory(0, _intermediateIndex), 
+                        (IgnoredData)(byte)(_options & ParseOptions.Ignoring)));
                         
                     _numParams = 0;
                     _param = 0;
                     _options &= ~ParseOptions.CollectingParameters;
                     return;
-                case VTParserAction.Put:
-                    _eventSink.OnPut(new VTPutAction(next));
+                case ParserAction.Put:
+                    Put.Publish(new PutEvent(next));
                     return;
-                case VTParserAction.OscStart:
+                case ParserAction.OscStart:
                     _oscIndex = 0;
                     _oscNumParams = 0;
                     _options &= ~ParseOptions.IgnoringParameters;
                     return;
-                case VTParserAction.OscPut:
+                case ParserAction.OscPut:
                     if (_oscIndex == _oscRaw.Length)
                         return;
 
@@ -164,7 +191,7 @@ namespace TerminalVelocity.VT
 
                     _oscRaw[_oscIndex++] = next;
                     return;
-                case VTParserAction.OscEnd:
+                case ParserAction.OscEnd:
                     if (_oscIndex == _oscRaw.Length)
                         return;
 
@@ -177,21 +204,21 @@ namespace TerminalVelocity.VT
                     else
                         _oscParams[_oscNumParams++] = _oscRaw.AsMemory(_previousOscEnd, _oscIndex - _previousOscEnd);
 
-                    _eventSink.OnOscDispatch(new VTOscDispatchAction(
-                        _oscParams.AsSpan(0, _oscNumParams),
-                        (VTIgnore)(byte)(_options & ParseOptions.Ignoring)));
+                    OsCommand.Publish(new OsCommandEvent(
+                        _oscParams.AsMemory(0, _oscNumParams),
+                        (IgnoredData)(byte)(_options & ParseOptions.Ignoring)));
                     return;
-                case VTParserAction.Unhook:
-                    _eventSink.OnUnhook(default);
+                case ParserAction.Unhook:
+                    Unhook.Publish(default);
                     return;
-                case VTParserAction.CsiDispatch:
+                case ParserAction.CsiDispatch:
                     if (_options.HasFlag(ParseOptions.CollectingParameters))
                         _params[_numParams++] = _param;
-                    
-                    _eventSink.OnCsiDispatch(new VTCsiDispatchAction(
-                        _intermediates.AsSpan(0, _intermediateIndex),
-                        _params.AsSpan(0, _numParams),
-                        (VTIgnore)(byte)(_options & ParseOptions.Ignoring),
+
+                    ControlSequence.Publish(new ControlSequenceEvent(
+                        _intermediates.AsMemory(0, _intermediateIndex),
+                        _params.AsMemory(0, _numParams),
+                        (IgnoredData)(byte)(_options & ParseOptions.Ignoring),
                         (char)next
                     ));
                     
@@ -199,23 +226,23 @@ namespace TerminalVelocity.VT
                     _param = 0;
                     _options &= ~ParseOptions.CollectingParameters;
                     return;
-                case VTParserAction.EscDispatch:
-                    _eventSink.OnEscDispatch(new VTEscDispatchAction(
-                        _intermediates.AsSpan(0, _intermediateIndex),
-                        (VTIgnore)(byte)(_options & ParseOptions.Ignoring),
+                case ParserAction.EscDispatch:
+                    EscapeSequence.Publish(new EscapeSequenceEvent(
+                        _intermediates.AsMemory(0, _intermediateIndex),
+                        (IgnoredData)(byte)(_options & ParseOptions.Ignoring),
                         next
                     ));
                     return;
-                case VTParserAction.Ignore:
-                case VTParserAction.None:
+                case ParserAction.Ignore:
+                case ParserAction.None:
                     return;
-                case VTParserAction.Collect:
+                case ParserAction.Collect:
                     if (_intermediateIndex == _intermediates.Length)
                         _options |= ParseOptions.IgnoringIntermediates;
                     else
                         _intermediates[_intermediateIndex++] = next;
                     return;
-                case VTParserAction.Param:
+                case ParserAction.Param:
                     if (next == ';')
                     {
                         if (_numParams == _params.Length - 1)
@@ -234,13 +261,13 @@ namespace TerminalVelocity.VT
                         _options |= ParseOptions.CollectingParameters;
                     }
                     return;
-                case VTParserAction.Clear:
+                case ParserAction.Clear:
                     _intermediateIndex = 0;
                     _numParams = 0;
                     _options &= ~ParseOptions.IgnoringIntermediates;
                     _options &= ~ParseOptions.IgnoringParameters;
                     return;
-                case VTParserAction.BeginUtf8:
+                case ParserAction.BeginUtf8:
                     ProcessUtf8(next);
                     return;
             }

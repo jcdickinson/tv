@@ -1,6 +1,6 @@
 namespace TerminalVelocity.VT
 {
-    internal enum VTParserState
+    internal enum ParserState
     {
         Anywhere = 0,
         CsiEntry = 1,

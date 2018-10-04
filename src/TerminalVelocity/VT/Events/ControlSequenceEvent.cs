@@ -1,22 +1,24 @@
 using System;
 using System.Text;
 
-namespace TerminalVelocity.VT
+namespace TerminalVelocity.VT.Events
 {
-    public readonly ref struct VTCsiDispatchAction
+    public readonly struct ControlSequenceEvent
     {
-        public char Character { get; }
+        public const string ContractName = "CSI.Events.VT.TerminalVelocity";
 
-        public ReadOnlySpan<byte> Intermediates { get; }
+        public readonly char Character;
 
-        public VTIgnore Ignored { get; }
+        public readonly ReadOnlyMemory<byte> Intermediates;
 
-        public ReadOnlySpan<long> Parameters { get; }
+        public readonly IgnoredData Ignored;
 
-        public VTCsiDispatchAction(
-            ReadOnlySpan<byte> intermediates,
-            ReadOnlySpan<long> parameters,
-            VTIgnore ignored,
+        public readonly ReadOnlyMemory<long> Parameters;
+
+        public ControlSequenceEvent(
+            ReadOnlyMemory<byte> intermediates,
+            ReadOnlyMemory<long> parameters,
+            IgnoredData ignored,
             char character)
         {
             Character = character;
@@ -27,7 +29,7 @@ namespace TerminalVelocity.VT
 
         public override string ToString()
         {
-            var sb = new StringBuilder("CSI Dispatch ");
+            var sb = new StringBuilder("CSI ");
 
             sb.Append(((int)Character).ToString("x2"))
                 .Append(" '")
@@ -37,10 +39,10 @@ namespace TerminalVelocity.VT
             for (var i = 0; i < Parameters.Length; i++)
             {
                 sb.Append(i == 0 ? string.Empty : "; ");
-                sb.Append(Parameters[i].ToString("x2"));
+                sb.Append(Parameters.Span[i].ToString("x2"));
             }
             
-            if (Ignored.HasFlag(VTIgnore.Parameters))
+            if (Ignored.HasFlag(IgnoredData.Parameters))
                 sb.Append(Parameters.Length > 0 ? "; ignored" : "ignored");
 
             sb.Append(")");
@@ -48,10 +50,10 @@ namespace TerminalVelocity.VT
             for (var i = 0; i < Intermediates.Length; i++)
             {
                 sb.Append(i == 0 ? " " : "; ");
-                sb.Append(Intermediates[i].ToString("x2"));
+                sb.Append(Intermediates.Span[i].ToString("x2"));
             }
 
-            if (Ignored.HasFlag(VTIgnore.Intermediates))
+            if (Ignored.HasFlag(IgnoredData.Intermediates))
                 sb.Append(Intermediates.Length > 0 ? "; ignored" : " ignored");
 
             return sb.ToString();

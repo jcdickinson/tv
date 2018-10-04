@@ -1,6 +1,6 @@
 namespace TerminalVelocity.VT
 {
-    internal enum VTParserAction
+    internal enum ParserAction : byte
     {
         None = 0,
         Clear = 1,

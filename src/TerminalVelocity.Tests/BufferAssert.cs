@@ -7,7 +7,7 @@ namespace TerminalVelocity
     public static class BufferAssert
     {
         [DebuggerNonUserCode]
-        public static void Equal<T>(ReadOnlySpan<T> expected, ReadOnlySpan<T> actual)
+        public static void Equal<T>(ReadOnlyMemory<T> expected, ReadOnlyMemory<T> actual)
         {
             var array1 = expected.ToArray();
             var array2 = actual.ToArray();

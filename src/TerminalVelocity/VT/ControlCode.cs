@@ -1,7 +1,7 @@
 namespace TerminalVelocity.VT
 {
     // https://en.wikipedia.org/wiki/C0_and_C1_control_codes
-    public enum VTControlCode : byte
+    public enum ControlCode : byte
     {
         // C0
         Null = 0x00,

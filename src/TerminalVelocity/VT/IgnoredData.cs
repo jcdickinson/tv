@@ -3,7 +3,7 @@ using System;
 namespace TerminalVelocity.VT
 {
     [Flags]
-    public enum VTIgnore : byte
+    public enum IgnoredData : byte
     {
         None = 0,
         Intermediates = 0b0000_00001,

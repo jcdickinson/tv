@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using System.Composition;
 using System.Composition.Hosting;
@@ -28,6 +29,18 @@ namespace TerminalVelocity
         public Event()
         {
             _targets = new LinkedList<SubscriberInfo>();
+        }
+
+        public Event(Action<T> handler)
+            : this()
+        {
+            Subscribe((ref T x) => handler(x));
+        }
+
+        public Event(Func<T, T> handler)
+            : this()
+        {
+            Subscribe((ref T x) => x = handler(x));
         }
 
         public int Subscribe(EventHandler handler)
