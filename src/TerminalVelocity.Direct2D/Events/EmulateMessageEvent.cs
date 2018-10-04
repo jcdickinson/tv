@@ -54,5 +54,8 @@ namespace TerminalVelocity.Direct2D.Events
             var message = new WindowMessage(IntPtr.Zero, (uint)WM.PAINT, IntPtr.Zero, IntPtr.Zero);
             return new EmulateMessageEvent(message);
         }
+
+        public override string ToString()
+            => FormattableString.Invariant($"{Message.Hwnd}.{Message.Id} ({Message.LParam}, {Message.WParam})");
     }
 }

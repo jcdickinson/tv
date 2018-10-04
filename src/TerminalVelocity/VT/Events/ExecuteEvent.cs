@@ -13,6 +13,6 @@ namespace TerminalVelocity.VT.Events
             ControlCode = controlCode;
         }
 
-        public override string ToString() => FormattableString.Invariant($"Execute {ControlCode}");
+        public override string ToString() => FormattableString.Invariant($"{ControlCode}");
     }
 }

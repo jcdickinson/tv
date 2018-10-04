@@ -1,11 +1,11 @@
 using System;
 using System.Text;
 
-namespace TerminalVelocity.VT.Events
+namespace TerminalVelocity.Emulator.Events
 {
     public readonly struct PrintEvent
     {
-        public const string ContractName = "Print.Events.VT.TerminalVelocity";
+        public const string ContractName = "Print.Events.Emulator.TerminalVelocity";
 
         public readonly ReadOnlyMemory<char> Characters;
 

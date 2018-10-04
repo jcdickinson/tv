@@ -1,3 +1,4 @@
+using System;
 using SharpDX;
 using WinApi.User32;
 using WinApi.Windows;
@@ -13,7 +14,6 @@ namespace TerminalVelocity.Direct2D.Events
         public readonly bool IsButtonDown;
         public readonly MouseInputKeyStateFlags InputState;
         public readonly MouseButtonResult Result;
-        public bool IsHandled;
 
         public MouseButtonEvent(in MouseButtonPacket packet)
         {
@@ -22,7 +22,10 @@ namespace TerminalVelocity.Direct2D.Events
             IsButtonDown = packet.IsButtonDown;
             InputState = packet.InputState;
             Result = packet.Result;
-            IsHandled = false;
         }
+
+        public override string ToString() => IsButtonDown
+            ? FormattableString.Invariant($"{Button} Down {Point} {InputState}")
+            : FormattableString.Invariant($"{Button} Up {Point} {InputState}");
     }
 }

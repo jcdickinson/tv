@@ -1,5 +1,6 @@
 using System;
 using System.Composition;
+using TerminalVelocity.Pty.Events;
 using TerminalVelocity.VT.Events;
 
 namespace TerminalVelocity.VT
@@ -76,13 +77,18 @@ namespace TerminalVelocity.VT
             _utf8 = new ParserUtf8(true);
         }
 
-        public void Process(ReadOnlySpan<byte> next)
+        [Import(ReceiveEvent.ContractName)]
+        public Event<ReceiveEvent> OnReceive
         {
-            for (var i = 0; i < next.Length; i++)
-                Process(next[i]);
+            set => value.Subscribe((ref ReceiveEvent receive) =>
+            {
+                var next = receive.Data.Span;
+                for (var i = 0; i < next.Length; i++)
+                    Process(next[i]);
+            });
         }
 
-        public void Process(byte next)
+        private void Process(byte next)
         {
             if (_state == ParserState.Utf8)
             {
@@ -127,9 +133,7 @@ namespace TerminalVelocity.VT
         {
             if (change.Action == ParserAction.None)
                 return;
-
-            System.Diagnostics.Debug.WriteLine(change);
-
+                
             var (_, action) = change;
 
             switch (action)

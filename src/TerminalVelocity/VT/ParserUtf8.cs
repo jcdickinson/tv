@@ -17,7 +17,7 @@ namespace TerminalVelocity.VT
             var encoding = new UTF8Encoding(false, false);
             _utf8 = encoding.GetDecoder();
             _buffer = new byte[1];
-            _result = new char[encoding.GetMaxCharCount(6)];
+            _result = new char[16];
         }
 
         public ReadOnlyMemory<char> Provide(byte next)

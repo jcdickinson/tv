@@ -11,13 +11,14 @@ namespace TerminalVelocity.Direct2D.Events
 
         public readonly WindowSizeFlag Flag;
         public readonly Size Size;
-        public bool IsHandled;
 
         public SizeEvent(in SizePacket packet)
         {
             Flag = packet.Flag;
             Size = packet.Size;
-            IsHandled = false;
         }
+        
+        public override string ToString()
+            => FormattableString.Invariant($"{Flag} {Size}");
     }
 }

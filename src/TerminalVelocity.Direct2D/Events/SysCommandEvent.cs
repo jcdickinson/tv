@@ -13,7 +13,6 @@ namespace TerminalVelocity.Direct2D.Events
         public readonly SysCommand Command;
         public readonly bool IsAccelerator;
         public readonly bool IsMnemonic;
-        public bool IsHandled;
 
         public SysCommandEvent(in SysCommandPacket packet)
         {
@@ -22,7 +21,13 @@ namespace TerminalVelocity.Direct2D.Events
             Command = packet.Command;
             IsAccelerator = packet.IsAccelerator;
             IsMnemonic = packet.IsMnemonic;
-            IsHandled = false;
+        }
+        
+        public override string ToString()
+        {
+            var accel = IsAccelerator ? " Accelerator " : string.Empty;
+            var mnem = IsMnemonic ? " Mnemonic " : string.Empty;
+            return FormattableString.Invariant($"{Command} ({X}, {Y}){accel}{mnem}");
         }
     }
 }

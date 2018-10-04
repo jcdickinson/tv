@@ -4,6 +4,6 @@ namespace TerminalVelocity.VT.Events
     {        
         public const string ContractName = "Unhook.DCS.Events.VT.TerminalVelocity";
 
-        public override string ToString() => "DCS Unhook";
+        public override string ToString() => string.Empty;
     }
 }

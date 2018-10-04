@@ -61,24 +61,21 @@ namespace TerminalVelocity.Direct2D
         protected override void OnSysCommand(ref SysCommandPacket packet)
         {
             var evt = new SysCommandEvent(packet);
-            SysCommand.Publish(ref evt);
-            if (!evt.IsHandled)
+            if (!SysCommand.Publish(ref evt))
                 base.OnSysCommand(ref packet);
         }
 
         protected override void OnSize(ref SizePacket packet)
         {
             var evt = new SizeEvent(packet);
-            Size.Publish(ref evt);
-            if (!evt.IsHandled)
+            if (!Size.Publish(ref evt))
                 base.OnSize(ref packet);
         }
         
         protected override void OnClose(ref Packet packet)
         {
             var evt = new CloseEvent();
-            Close.Publish(ref evt);
-            if (!evt.IsHandled)
+            if (!Close.Publish(ref evt))
                 base.OnClose(ref packet);
         }
 

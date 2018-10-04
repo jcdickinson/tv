@@ -25,18 +25,14 @@ namespace TerminalVelocity.VT.Events
         
         public override string ToString()
         {
-            var sb = new StringBuilder("ESC ");
+            var sb = new StringBuilder();
 
-            sb.Append(((int)Byte).ToString("x2"));
+            sb.Append((char)Byte);
+            sb.Append(";");
 
-            for (var i = 0; i < Intermediates.Length; i++)
-            {
-                sb.Append(i == 0 ? " " : "; ");
-                sb.Append(Intermediates.Span[i].ToString("x2"));
-            }
-
+            sb.Append(Encoding.ASCII.GetString(Intermediates.Span));
             if (Ignored.HasFlag(IgnoredData.Intermediates))
-                sb.Append(Intermediates.Length > 0 ? "; ignored" : " ignored");
+                sb.Append("...");
 
             return sb.ToString();
         }

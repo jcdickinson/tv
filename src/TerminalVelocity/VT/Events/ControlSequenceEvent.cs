@@ -29,32 +29,24 @@ namespace TerminalVelocity.VT.Events
 
         public override string ToString()
         {
-            var sb = new StringBuilder("CSI ");
+            var sb = new StringBuilder();
 
-            sb.Append(((int)Character).ToString("x2"))
-                .Append(" '")
-                .Append(Character)
-                .Append("' (");
+            sb.Append(Character).Append("(");
 
             for (var i = 0; i < Parameters.Length; i++)
             {
-                sb.Append(i == 0 ? string.Empty : "; ");
+                sb.Append(i == 0 ? string.Empty : ";");
                 sb.Append(Parameters.Span[i].ToString("x2"));
             }
             
             if (Ignored.HasFlag(IgnoredData.Parameters))
-                sb.Append(Parameters.Length > 0 ? "; ignored" : "ignored");
+                sb.Append("...");
 
             sb.Append(")");
 
-            for (var i = 0; i < Intermediates.Length; i++)
-            {
-                sb.Append(i == 0 ? " " : "; ");
-                sb.Append(Intermediates.Span[i].ToString("x2"));
-            }
-
+            sb.Append(Encoding.ASCII.GetString(Intermediates.Span));
             if (Ignored.HasFlag(IgnoredData.Intermediates))
-                sb.Append(Intermediates.Length > 0 ? "; ignored" : " ignored");
+                sb.Append("...");
 
             return sb.ToString();
         }

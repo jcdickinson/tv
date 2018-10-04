@@ -7,6 +7,10 @@ namespace TerminalVelocity.VT.Events
     {
         public const string ContractName = "OSC.Events.VT.TerminalVelocity";
 
+        public int Length => Parameters.Length;
+
+        public ReadOnlySpan<byte> this[int index] => Parameters.Span[index].Span;
+
         public readonly ReadOnlyMemory<ReadOnlyMemory<byte>> Parameters;
 
         public readonly IgnoredData Ignored;
@@ -21,22 +25,16 @@ namespace TerminalVelocity.VT.Events
         
         public override string ToString()
         {
-            var sb = new StringBuilder("OSC");
+            var sb = new StringBuilder();
 
             for (var i = 0; i < Parameters.Span.Length; i++)
             {
-                sb.Append(i== 0 ? " " : "; ");
-
-                var parameter = Parameters.Span[i].Span;
-                for (var j = 0; j < parameter.Length; j++)
-                {
-                    if (j > 0) sb.Append(", ");
-                    sb.Append(parameter[j].ToString("x2"));
-                }
+                sb.Append(i== 0 ? string.Empty : ";");
+                sb.Append(Encoding.UTF8.GetString(Parameters.Span[i].Span));
             }
 
             if (Ignored.HasFlag(IgnoredData.Parameters))
-                sb.Append(Parameters.Length > 0 ? "; ignored" : " ignored");
+                sb.Append("...");
 
             return sb.ToString();
         }

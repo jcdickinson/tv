@@ -13,6 +13,6 @@ namespace TerminalVelocity.VT.Events
             Byte = @byte;
         }
         
-        public override string ToString() => FormattableString.Invariant($"DCS Put {(int)Byte:x2}");
+        public override string ToString() => ((char)Byte).ToString();
     }
 }

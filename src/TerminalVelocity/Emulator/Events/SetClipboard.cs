@@ -1,15 +1,15 @@
 using System;
 using System.Text;
 
-namespace TerminalVelocity.VT.Events
+namespace TerminalVelocity.Emulator.Events
 {
-    public readonly struct PrintEvent
+    public readonly struct SetClipboardEvent
     {
-        public const string ContractName = "Print.Events.VT.TerminalVelocity";
+        public const string ContractName = "SetClipboard.Events.Emulator.TerminalVelocity";
 
         public readonly ReadOnlyMemory<char> Characters;
 
-        public PrintEvent(ReadOnlyMemory<char> characters)
+        public SetClipboardEvent(ReadOnlyMemory<char> characters)
         {
             Characters = characters;
         }
