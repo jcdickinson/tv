@@ -232,9 +232,9 @@ namespace TerminalVelocity.VT
                     return;
                 case ParserAction.EscDispatch:
                     EscapeSequence.Publish(new EscapeSequenceEvent(
+                        (EscapeCommand)next,
                         _intermediates.AsMemory(0, _intermediateIndex),
-                        (IgnoredData)(byte)(_options & ParseOptions.Ignoring),
-                        next
+                        (IgnoredData)(byte)(_options & ParseOptions.Ignoring)
                     ));
                     return;
                 case ParserAction.Ignore:

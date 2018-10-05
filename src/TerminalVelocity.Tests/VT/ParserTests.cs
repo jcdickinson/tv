@@ -29,9 +29,9 @@ namespace TerminalVelocity.VT
                 ++dispatched;
                 Assert.Equal('p', csi.Character);
                 Assert.Equal(IgnoredData.None, csi.Ignored);
-                BufferAssert.Equal(new byte[] { 0x21, 0x23 }, csi.Intermediates);
-                BufferAssert.Equal(new long[] { 0x01, 0x01, 0x1, 0x1 }, csi.Parameters);
-                Assert.Equal("p(01;01;01;01)!#", csi.ToString());
+                Assert.Equal(new byte[] { 0x21, 0x23 }, csi.Intermediates.ToArray());
+                Assert.Equal(new long[] { 0x01, 0x01, 0x1, 0x1 }, csi.Parameters.ToArray());
+                Assert.Equal("p(01;01;01;01)[!#]", csi.ToString());
             });
 
             SendTwice(parser, packet);
@@ -54,7 +54,7 @@ namespace TerminalVelocity.VT
                 Assert.Equal(IgnoredData.None, csi.Ignored);
                 Assert.Equal(0, csi.Intermediates.Length);
                 Assert.Equal(0, csi.Parameters.Length);
-                Assert.Equal("p()", csi.ToString());
+                Assert.Equal("p()[]", csi.ToString());
             });
 
             SendTwice(parser, packet);
@@ -75,9 +75,9 @@ namespace TerminalVelocity.VT
                 ++dispatched;
                 Assert.Equal('p', csi.Character);
                 Assert.Equal(IgnoredData.All, csi.Ignored);
-                BufferAssert.Equal(new byte[] { 0x21 }, csi.Intermediates);
-                BufferAssert.Equal(new long[] { 0x01, 0x01 }, csi.Parameters);
-                Assert.Equal("p(01;01...)!...", csi.ToString());
+                Assert.Equal(new byte[] { 0x21 }, csi.Intermediates.ToArray());
+                Assert.Equal(new long[] { 0x01, 0x01 }, csi.Parameters.ToArray());
+                Assert.Equal("p(01;01...)[!...]", csi.ToString());
             });
 
             SendTwice(parser, packet);
@@ -98,9 +98,9 @@ namespace TerminalVelocity.VT
                 ++dispatched;
                 Assert.Equal('m', csi.Character);
                 Assert.Equal(IgnoredData.None, csi.Ignored);
-                BufferAssert.Equal(new byte[] { }, csi.Intermediates);
-                BufferAssert.Equal(new long[] { 0x00, 0x04 }, csi.Parameters);
-                Assert.Equal("m(00;04)", csi.ToString());
+                Assert.Equal(new byte[] { }, csi.Intermediates.ToArray());
+                Assert.Equal(new long[] { 0x00, 0x04 }, csi.Parameters.ToArray());
+                Assert.Equal("m(00;04)[]", csi.ToString());
             });
 
             SendTwice(parser, packet);
@@ -121,9 +121,9 @@ namespace TerminalVelocity.VT
                 ++dispatched;
                 Assert.Equal('m', csi.Character);
                 Assert.Equal(IgnoredData.None, csi.Ignored);
-                BufferAssert.Equal(new byte[] { }, csi.Intermediates);
-                BufferAssert.Equal(new long[] { long.MaxValue }, csi.Parameters);
-                Assert.Equal("m(7fffffffffffffff)", csi.ToString());
+                Assert.Equal(new byte[] { }, csi.Intermediates.ToArray());
+                Assert.Equal(new long[] { long.MaxValue }, csi.Parameters.ToArray());
+                Assert.Equal("m(7fffffffffffffff)[]", csi.ToString());
             });
 
             SendTwice(parser, packet);
@@ -144,9 +144,9 @@ namespace TerminalVelocity.VT
             {
                 ++hookDispatched;
                 Assert.Equal(IgnoredData.None, hook.Ignored);
-                BufferAssert.Equal(new long[] { 0x01, 0x02 }, hook.Parameters);
-                BufferAssert.Equal(new byte[] { 0x20, 0x21 }, hook.Intermediates);
-                Assert.Equal("(01;02) !", hook.ToString());
+                Assert.Equal(new long[] { 0x01, 0x02 }, hook.Parameters.ToArray());
+                Assert.Equal(new byte[] { 0x20, 0x21 }, hook.Intermediates.ToArray());
+                Assert.Equal("(01;02)[ !]", hook.ToString());
             });
 
             var putDispatched = 0;
@@ -185,9 +185,9 @@ namespace TerminalVelocity.VT
             {
                 ++hookDispatched;
                 Assert.Equal(IgnoredData.All, hook.Ignored);
-                BufferAssert.Equal(new long[] { 0x01, 0x02 }, hook.Parameters);
-                BufferAssert.Equal(new byte[] { 0x20 }, hook.Intermediates);
-                Assert.Equal("(01;02...) ...", hook.ToString());
+                Assert.Equal(new long[] { 0x01, 0x02 }, hook.Parameters.ToArray());
+                Assert.Equal(new byte[] { 0x20 }, hook.Intermediates.ToArray());
+                Assert.Equal("(01;02...)[ ...]", hook.ToString());
             });
 
             var putDispatched = 0;
@@ -224,10 +224,10 @@ namespace TerminalVelocity.VT
             parser.EscapeSequence = new Event<Events.EscapeSequenceEvent>("ESC", esc =>
             {
                 ++dispatched;
-                Assert.Equal((byte)'0', esc.Byte);
+                Assert.Equal(EscapeCommand.ConfigureSpecialCharSet, esc.Command);
                 Assert.Equal(IgnoredData.None, esc.Ignored);
-                BufferAssert.Equal(new byte[] { 0x20, 0x21 }, esc.Intermediates);
-                Assert.Equal("0; !", esc.ToString());
+                Assert.Equal(new byte[] { 0x20, 0x21 }, esc.Intermediates.ToArray());
+                Assert.Equal("ConfigureSpecialCharSet[ !]", esc.ToString());
             });
 
             SendTwice(parser, packet);
@@ -246,10 +246,10 @@ namespace TerminalVelocity.VT
             parser.EscapeSequence = new Event<Events.EscapeSequenceEvent>("ESC", esc =>
             {
                 ++dispatched;
-                Assert.Equal((byte)'0', esc.Byte);
+                Assert.Equal(EscapeCommand.ConfigureSpecialCharSet, esc.Command);
                 Assert.Equal(IgnoredData.None, esc.Ignored);
-                BufferAssert.Equal(new byte[] { }, esc.Intermediates);
-                Assert.Equal("0;", esc.ToString());
+                Assert.Equal(new byte[] { }, esc.Intermediates.ToArray());
+                Assert.Equal("ConfigureSpecialCharSet[]", esc.ToString());
             });
 
             SendTwice(parser, packet);
@@ -268,10 +268,10 @@ namespace TerminalVelocity.VT
             parser.EscapeSequence = new Event<Events.EscapeSequenceEvent>("ESC", esc =>
             {
                 ++dispatched;
-                Assert.Equal((byte)'0', esc.Byte);
+                Assert.Equal(EscapeCommand.ConfigureSpecialCharSet, esc.Command);
                 Assert.Equal(IgnoredData.Intermediates, esc.Ignored);
-                BufferAssert.Equal(new byte[] { 0x20 }, esc.Intermediates);
-                Assert.Equal("0; ...", esc.ToString());
+                Assert.Equal(new byte[] { 0x20 }, esc.Intermediates.ToArray());
+                Assert.Equal("ConfigureSpecialCharSet[ ...]", esc.ToString());
             });
 
             SendTwice(parser, packet);
@@ -310,11 +310,11 @@ namespace TerminalVelocity.VT
             parser.OsCommand = new Event<Events.OsCommandEvent>("OSC", osc =>
             {
                 ++dispatched;
-                Assert.Equal(2, osc.Parameters.Length);
-                BufferAssert.Equal(osc.Parameters.Span[0], packet.AsMemory(2, 1));
-                BufferAssert.Equal(osc.Parameters.Span[1], packet.AsMemory(4, packet.Length - 5));
+                Assert.Equal(1, osc.Length);
+                Assert.Equal(OsCommand.SetWindowTitle, osc.Command);
+                Assert.Equal(osc[0].ToArray(), packet.AsMemory(4, packet.Length - 5).ToArray());
                 
-                Assert.Equal("2;jwilm@jwilm-desk: ~/code/alacritty", osc.ToString());
+                Assert.Equal("SetWindowTitle(jwilm@jwilm-desk: ~/code/alacritty)", osc.ToString());
             });
 
             SendTwice(parser, packet);
@@ -333,10 +333,10 @@ namespace TerminalVelocity.VT
             parser.OsCommand = new Event<Events.OsCommandEvent>("OSC", osc =>
             {
                 ++dispatched;
-                Assert.Equal(1, osc.Parameters.Length);
-                Assert.Equal(0, osc.Parameters.Span[0].Length);
-
-                Assert.Equal(string.Empty, osc.ToString());
+                Assert.Equal(1, osc.Length);
+                Assert.Equal(0, osc[0].Length);
+                Assert.Equal(OsCommand.Unknown, osc.Command);
+                Assert.Equal("Unknown()", osc.ToString());
             });
 
             SendTwice(parser, packet);
@@ -356,8 +356,8 @@ namespace TerminalVelocity.VT
             {
                 ++dispatched;
                 Assert.Equal(IgnoredData.Parameters, osc.Ignored);
-                Assert.Equal(3, osc.Parameters.Length);
-                Assert.Equal(";;...", osc.ToString());
+                Assert.Equal(3, osc.Length);
+                Assert.Equal("Unknown(;;...)", osc.ToString());
             });
 
             SendTwice(parser, packet);
@@ -377,11 +377,11 @@ namespace TerminalVelocity.VT
             {
                 ++dispatched;
                 Assert.Equal(IgnoredData.None, osc.Ignored);
-                Assert.Equal(2, osc.Parameters.Length);
-                BufferAssert.Equal(osc.Parameters.Span[0], packet.AsMemory(2, 1));
-                BufferAssert.Equal(osc.Parameters.Span[1], packet.AsMemory(4, packet.Length - 5));
+                Assert.Equal(1, osc.Length);
+                Assert.Equal(OsCommand.SetWindowTitle, osc.Command);
+                Assert.Equal(osc[0].ToArray(), packet.AsMemory(4, packet.Length - 5).ToArray());
 
-                Assert.Equal("2;echo '¯\\_(ツ)_/¯' && sleep 1", osc.ToString());
+                Assert.Equal("SetWindowTitle(echo '¯\\_(ツ)_/¯' && sleep 1)", osc.ToString());
             });
 
             SendTwice(parser, packet);

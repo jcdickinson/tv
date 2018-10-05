@@ -1,6 +1,6 @@
 namespace TerminalVelocity.Emulator
 {
-    public enum Delete : byte
+    public enum DeleteDirection : byte
     {
         Backwards = 0,
         Forwards = 1

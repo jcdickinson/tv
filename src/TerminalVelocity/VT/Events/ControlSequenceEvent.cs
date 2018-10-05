@@ -42,11 +42,13 @@ namespace TerminalVelocity.VT.Events
             if (Ignored.HasFlag(IgnoredData.Parameters))
                 sb.Append("...");
 
-            sb.Append(")");
+            sb.Append(")[");
 
             sb.Append(Encoding.ASCII.GetString(Intermediates.Span));
             if (Ignored.HasFlag(IgnoredData.Intermediates))
                 sb.Append("...");
+            
+            sb.Append("]");
 
             return sb.ToString();
         }

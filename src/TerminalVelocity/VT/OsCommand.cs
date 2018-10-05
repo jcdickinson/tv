@@ -1,6 +1,6 @@
-namespace TerminalVelocity.Emulator
+namespace TerminalVelocity.VT
 {
-    internal enum OsCommand : byte
+    public enum OsCommand : short
     {
         SetWindowIconAndTitle = 0,
         SetWindowIcon = 1,
@@ -15,5 +15,6 @@ namespace TerminalVelocity.Emulator
         ResetForegroundColor = 110,
         ResetBackgroundColor = 111,
         ResetCursorColor = 112,
+        Unknown = -1
     }
 }

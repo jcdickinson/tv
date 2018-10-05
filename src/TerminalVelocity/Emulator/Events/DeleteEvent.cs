@@ -6,9 +6,9 @@ namespace TerminalVelocity.Emulator.Events
     {
         public const string ContractName = "Delete.Events.Emulator.TerminalVelocity";
 
-        public readonly Delete Direction;
+        public readonly DeleteDirection Direction;
 
-        public DeleteEvent(Delete direction)
+        public DeleteEvent(DeleteDirection direction)
         {
             Direction = direction;
         }

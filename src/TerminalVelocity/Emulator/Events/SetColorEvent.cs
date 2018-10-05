@@ -17,6 +17,6 @@ namespace TerminalVelocity.Emulator.Events
             Color = color;
         }
         
-        public override string ToString() => FormattableString.Invariant($"{Index}={Color}");
+        public override string ToString() => FormattableString.Invariant($"{Index}=({Color.R},{Color.G},{Color.B})");
     }
 }

@@ -33,20 +33,20 @@ namespace TerminalVelocity.Emulator
 
         [Import(VT.Events.PrintEvent.ContractName)]
         public Event<VT.Events.PrintEvent> OnPrint
-        { 
+        {
             set => value.Subscribe((ref VT.Events.PrintEvent print) =>
                 Print.Publish(new PrintEvent(MapCharacters(print.Characters.Span))));
         }
-        
+
         [Import(Events.WhitespaceEvent.ContractName)]
         public Event<WhitespaceEvent> Whitespace { private get; set; }
-        
+
         [Import(DeleteEvent.ContractName)]
         public Event<DeleteEvent> Delete { private get; set; }
-        
+
         [Import(BellEvent.ContractName)]
         public Event<BellEvent> Bell { private get; set; }
-        
+
         [Import(SetTabstopEvent.ContractName)]
         public Event<SetTabstopEvent> SetTabstop { private get; set; }
 
@@ -55,16 +55,16 @@ namespace TerminalVelocity.Emulator
 
         [Import(VT.Events.ExecuteEvent.ContractName)]
         public Event<VT.Events.ExecuteEvent> OnExecute
-        { 
+        {
             set => value.Subscribe((ref VT.Events.ExecuteEvent execute) =>
             {
                 switch (execute.ControlCode)
                 {
-                    case ControlCode.HorizontalTabulation: 
+                    case ControlCode.HorizontalTabulation:
                         Whitespace.Publish(new WhitespaceEvent(_horizontalTabulator, 1));
                         return;
                     case ControlCode.Backspace:
-                        Delete.Publish(new DeleteEvent(Emulator.Delete.Backwards));
+                        Delete.Publish(new DeleteEvent(Emulator.DeleteDirection.Backwards));
                         return;
                     case ControlCode.CarriageReturn:
                         Whitespace.Publish(new WhitespaceEvent(_cr, 1));
@@ -110,32 +110,28 @@ namespace TerminalVelocity.Emulator
 
         [Import(ResetColorEvent.ContractName)]
         public Event<ResetColorEvent> ResetColor { private get; set; }
-        
+
         [Import(VT.Events.OsCommandEvent.ContractName)]
         public Event<VT.Events.OsCommandEvent> OnOsCommand
-        { 
+        {
             set => value.Subscribe((ref VT.Events.OsCommandEvent osc) =>
             {
-                if (osc.Parameters.Length == 0 ||
-                    !TryParseByte(osc.Parameters.Span[0].Span, out var command))
-                    return;
-
                 Color color;
-                switch ((OsCommand)command)
+                switch (osc.Command)
                 {
                     case OsCommand.SetWindowIconAndTitle:
                     case OsCommand.SetWindowTitle:
                         // Set window title.
-                        if (osc.Length > 1 &&
-                            TryParseUtf8(osc[1], out var characters))
+                        if (osc.Length > 0 &&
+                            TryParseUtf8(osc[0], out var characters))
                             SetWindowTitle.Publish(new SetWindowTitleEvent(characters));
                         return;
                     case OsCommand.SetWindowIcon: return;
                     case OsCommand.SetColor:
                         // Set color index.
-                        if (osc.Length % 2 == 0)
+                        if (osc.Length % 2 != 0)
                             return;
-                        for (var i = 1; i < osc.Length; i++)
+                        for (var i = 0; i < osc.Length; i += 2)
                         {
                             if (TryParseByte(osc[i], out var index) &&
                                 TryParseColor(osc[i + 1], out color))
@@ -143,25 +139,25 @@ namespace TerminalVelocity.Emulator
                         }
                         return;
                     case OsCommand.SetForegroundColor:
-                        if (osc.Length > 1 &&
-                            TryParseColor(osc[1], out color))
+                        if (osc.Length > 0 &&
+                            TryParseColor(osc[0], out color))
                             SetColor.Publish(new SetColorEvent(NamedColor.Foreground, color));
                         return;
                     case OsCommand.SetBackgroundColor:
-                        if (osc.Length > 1 &&
-                            TryParseColor(osc[1], out color))
+                        if (osc.Length > 0 &&
+                            TryParseColor(osc[0], out color))
                             SetColor.Publish(new SetColorEvent(NamedColor.Background, color));
                         return;
                     case OsCommand.SetCursorColor:
-                        if (osc.Length > 1 &&
-                            TryParseColor(osc[1], out color))
+                        if (osc.Length > 0 &&
+                            TryParseColor(osc[0], out color))
                             SetColor.Publish(new SetColorEvent(NamedColor.Cursor, color));
                         return;
                     case OsCommand.SetCursorStyle:
-                        if (osc.Length > 1 && osc[1].Length > 12 &&
-                            osc[1].Slice(0, _cursorShape.Length).SequenceEqual(_cursorShape))
+                        if (osc.Length > 0 && osc[0].Length > 12 &&
+                            osc[0].Slice(0, _cursorShape.Length).SequenceEqual(_cursorShape))
                         {
-                            switch((CursorStyle) osc[1][12])
+                            switch ((CursorStyle)(osc[0][12] - (byte)'0'))
                             {
                                 case CursorStyle.Beam:
                                     SetCursor.Publish(new SetCursorEvent(CursorStyle.Beam));
@@ -176,21 +172,21 @@ namespace TerminalVelocity.Emulator
                         }
                         return;
                     case OsCommand.SetClipboard:
-                        if (osc.Length > 2 &&
-                            (osc[3].Length == 0 || osc[3][0] != '?') &
-                            TryParseBase64(osc[3], out var base64) &&
+                        if (osc.Length > 1 &&
+                            (osc[1].Length == 0 || osc[1][0] != '?') &
+                            TryParseBase64(osc[1], out var base64) &&
                             TryParseUtf8(base64, out var chars))
                             SetClipboard.Publish(new SetClipboardEvent(chars));
                         return;
                     case OsCommand.ResetColor:
-                        if (osc.Length == 1)
+                        if (osc.Length == 0)
                         {
                             for (var i = 0; i < 257; i++)
                                 ResetColor.Publish(new ResetColorEvent((NamedColor)i));
                             return;
                         }
 
-                        for (var i = 1; i < osc.Length; i++)
+                        for (var i = 0; i < osc.Length; i++)
                         {
                             if (TryParseByte(osc[i], out var index))
                                 ResetColor.Publish(new ResetColorEvent((NamedColor)index));
@@ -209,24 +205,65 @@ namespace TerminalVelocity.Emulator
             });
         }
 
+        [Import(MoveCursorEvent.ContractName)]
+        public Event<MoveCursorEvent> MoveCursor { private get; set; }
         
+        [Import(StateEvent.ContractName)]
+        public Event<StateEvent> State { private get; set; }
+
         [Import(VT.Events.EscapeSequenceEvent.ContractName)]
         public Event<VT.Events.EscapeSequenceEvent> OnEscapeSequence
-        { 
+        {
             set => value.Subscribe((ref VT.Events.EscapeSequenceEvent esc) =>
             {
                 int index;
-                switch((EscapeCommand)esc.Byte)
+                switch (esc.Command)
                 {
                     case EscapeCommand.ConfigureAsciiCharSet:
                         if (esc.Intermediates.Length > 0 &&
                             TryParseCharSetIndex(esc.Intermediates.Span[0], out index))
                             _activeCharSets[index] = CharSet.Ascii;
                         return;
-                    case EscapeCommand.ConfigureSpecialCharacterAndLineDrawingCharSet:
+                    case EscapeCommand.ConfigureSpecialCharSet:
                         if (esc.Intermediates.Length > 0 &&
                             TryParseCharSetIndex(esc.Intermediates.Span[0], out index))
                             _activeCharSets[index] = CharSet.SpecialCharacterAndLineDrawing;
+                        return;
+                    case EscapeCommand.LineFeed:
+                        Whitespace.Publish(new WhitespaceEvent(_lf, 1));
+                        return;
+                    case EscapeCommand.NextLine:
+                        Whitespace.Publish(new WhitespaceEvent(_crLf, 1));
+                        return;
+                    case EscapeCommand.ReverseIndex:
+                        MoveCursor.Publish(new MoveCursorEvent(MoveOrigin.Inverse, MoveAxis.Row, 1));
+                        return;
+                    case EscapeCommand.IdentifyTerminal:
+                        IdentifyTerminal.Publish(new IdentifyTerminalEvent());
+                        return;
+                    case EscapeCommand.ResetState:
+                        State.Publish(new StateEvent(StateMode.Reset, States.All));
+                        return;
+                    case EscapeCommand.SaveCursorPosition:
+                        MoveCursor.Publish(new MoveCursorEvent(MoveOrigin.Store, MoveAxis.Row, 0));
+                        MoveCursor.Publish(new MoveCursorEvent(MoveOrigin.Store, MoveAxis.Column, 0));
+                        return;
+                    case EscapeCommand.DecTest: // EscapeCommand.RestoreCusorPosition
+                        if (esc.Intermediates.Length != 0 && esc.Intermediates.Span[0] == '#')
+                        {
+                            // WTF is DECTEST?
+                        }
+                        else
+                        {
+                            MoveCursor.Publish(new MoveCursorEvent(MoveOrigin.Restore, MoveAxis.Row, 0));
+                            MoveCursor.Publish(new MoveCursorEvent(MoveOrigin.Restore, MoveAxis.Column, 0));   
+                        }
+                        return;
+                    case EscapeCommand.SetKeypadApplicationMode:
+                        State.Publish(new StateEvent(StateMode.Set, States.KeypadApplicationMode));
+                        return;
+                    case EscapeCommand.UnsetKeypadApplicationMode:
+                        State.Publish(new StateEvent(StateMode.Unset, States.KeypadApplicationMode));
                         return;
                 }
             });
@@ -257,7 +294,7 @@ namespace TerminalVelocity.Emulator
             _byteBuffer = new byte[maxBytes];
             _utf8 = new UTF8Encoding(false, false);
         }
-    
+
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private ReadOnlyMemory<char> MapCharacters(ReadOnlySpan<char> span)
         {
@@ -277,7 +314,7 @@ namespace TerminalVelocity.Emulator
                 result = (byte)((result * 10) + (raw[i] - (byte)'0'));
             return true;
         }
-        
+
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private bool TryParseUtf8(ReadOnlySpan<byte> raw, out ReadOnlyMemory<char> result)
         {
@@ -321,7 +358,7 @@ namespace TerminalVelocity.Emulator
             {
                 return false;
             }
-            
+
             color = Color.FromArgb(r, g, b);
             return true;
         }

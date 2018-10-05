@@ -22,6 +22,21 @@ namespace TerminalVelocity
             }
         }
 
+        private readonly struct EventHandlerForwarder
+        {
+            public readonly EventHandler Handler;
+
+            [DebuggerStepThrough]
+            public EventHandlerForwarder(EventHandler handler) => Handler = handler;
+
+            [DebuggerStepThrough]
+            public bool Subscription(ref T evt)
+            {
+                Handler(ref evt);
+                return false;
+            }
+        }
+
         public delegate void EventHandler(ref T payload);
         public delegate bool CancellingEventHandler(ref T payload);
 
@@ -47,12 +62,11 @@ namespace TerminalVelocity
             Subscribe((ref T x) => x = handler(x));
         }
         
-        public int Subscribe(EventHandler handler) => Subscribe((ref T evt) =>
-        {
-            handler(ref evt);
-            return false;
-        });
+        [DebuggerStepThrough]
+        public int Subscribe(EventHandler handler)
+            => Subscribe(new EventHandlerForwarder(handler).Subscription);
 
+        [DebuggerStepThrough]
         public int Subscribe(CancellingEventHandler handler)
         {
             var cookie = Interlocked.Increment(ref _cookie);
@@ -76,8 +90,10 @@ namespace TerminalVelocity
             }
         }
 
+        [DebuggerStepThrough]
         public bool Publish(T payload) => Publish(ref payload);
 
+        [DebuggerStepThrough]
         public bool Publish(ref T payload)
         {
             lock(_targets)

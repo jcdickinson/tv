@@ -7,18 +7,18 @@ namespace TerminalVelocity.VT.Events
     {
         public const string ContractName = "ESC.Events.VT.TerminalVelocity";
 
-        public readonly byte Byte;
+        public readonly EscapeCommand Command;
 
         public readonly ReadOnlyMemory<byte> Intermediates;
 
         public readonly IgnoredData Ignored;
 
         public EscapeSequenceEvent(
+            EscapeCommand command,
             ReadOnlyMemory<byte> intermediates,
-            IgnoredData ignored,
-            byte @byte)
+            IgnoredData ignored)
         {
-            Byte = @byte;
+            Command = command;
             Intermediates = intermediates;
             Ignored = ignored;
         }
@@ -27,12 +27,14 @@ namespace TerminalVelocity.VT.Events
         {
             var sb = new StringBuilder();
 
-            sb.Append((char)Byte);
-            sb.Append(";");
+            sb.Append(Command);
+            sb.Append("[");
 
             sb.Append(Encoding.ASCII.GetString(Intermediates.Span));
             if (Ignored.HasFlag(IgnoredData.Intermediates))
                 sb.Append("...");
+            
+            sb.Append("]");
 
             return sb.ToString();
         }
