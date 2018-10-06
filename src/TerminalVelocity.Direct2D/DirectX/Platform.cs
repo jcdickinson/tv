@@ -2,7 +2,7 @@
 
 namespace TerminalVelocity.Direct2D.DirectX
 {
-    public partial class DirectX
+    public partial class Surface
     {
         private static readonly Version PlatformVersion = GetPlatformVersion();
 

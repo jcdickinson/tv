@@ -1,8 +1,11 @@
 ﻿using System;
+using System.Drawing;
 using System.Threading;
 using System.Threading.Tasks;
+using NetCoreEx.BinaryExtensions;
 using TerminalVelocity.Direct2D.Events;
 using TerminalVelocity.Eventing;
+using TerminalVelocity.Renderer.Events;
 using WinApi.User32;
 using WinApi.Windows;
 
@@ -36,26 +39,27 @@ namespace TerminalVelocity.Direct2D
         private readonly SysCommandEvent _sysCommandEvent;
         private readonly ResizeEvent _resizeEvent;
         private readonly CloseEvent _closeEvent;
-        private readonly CreatedEvent _createdEvent;
+        private readonly InitializeEvent _initializeEvent;
+        private readonly CreateEvent _createEvent;
+
+        private SizeF _dpiScale = new SizeF(1, 1);
 
         public RenderWindow(
-            MouseButtonEvent mouseButtonEvent,
-            RenderEvent renderEvent,
-            SysCommandEvent sysCommandEvent,
-            ResizeEvent resizeEvent,
-            CloseEvent closeEvent,
-            CreatedEvent createdEvent)
+            MouseButtonEvent mouseButtonEvent = null,
+            RenderEvent renderEvent = null,
+            SysCommandEvent sysCommandEvent = null,
+            ResizeEvent resizeEvent = null,
+            CloseEvent closeEvent = null,
+            InitializeEvent initializeEvent = null,
+            CreateEvent createEvent = null)
         {
-            _mouseButtonEvent = mouseButtonEvent ?? throw new ArgumentNullException(nameof(mouseButtonEvent));
-            _renderEvent = renderEvent ?? throw new ArgumentNullException(nameof(renderEvent));
-            _sysCommandEvent = sysCommandEvent ?? throw new ArgumentNullException(nameof(sysCommandEvent));
-            _resizeEvent = resizeEvent ?? throw new ArgumentNullException(nameof(resizeEvent));
-            _closeEvent = closeEvent ?? throw new ArgumentNullException(nameof(closeEvent));
-            _createdEvent = createdEvent ?? throw new ArgumentNullException(nameof(createdEvent));
-
-            // if (emulateMessageEvent == null) throw new ArgumentNullException(nameof(emulateMessageEvent));
-
-            // emulateMessageEvent.Raised += OnEmulateMessage;
+            _mouseButtonEvent = mouseButtonEvent;
+            _renderEvent = renderEvent;
+            _sysCommandEvent = sysCommandEvent;
+            _resizeEvent = resizeEvent;
+            _closeEvent = closeEvent;
+            _initializeEvent = initializeEvent;
+            _createEvent = createEvent;
         }
 
         IConstructionParams IConstructionParamsProvider.GetConstructionParams()
@@ -71,37 +75,82 @@ namespace TerminalVelocity.Direct2D
             return new ValueTask<EventStatus>(EventStatus.Continue);
         }
 
+        protected override void OnMessage(ref WindowMessage msg)
+        {
+            switch (msg.Id)
+            {
+                case WM.DPICHANGED:
+                    OnDpiChanged(ref msg);
+                    break;
+                default:
+                    base.OnMessage(ref msg);
+                    break;
+            }
+        }
+
+        private void OnDpiChanged(ref WindowMessage msg)
+        {
+            msg.WParam.BreakSafeInt32To16Signed(out var yAxis, out var xAxis);
+            _dpiScale = new SizeF(
+                xAxis / 96.0f,
+                yAxis / 96.0f
+            );
+
+            base.OnMessage(ref msg);
+        }
+
         protected override void OnSysCommand(ref SysCommandPacket packet)
         {
-            _sysCommandEvent.Publish(new SysCommandEventData(packet));
+            _sysCommandEvent?.Publish(new SysCommandEventData(packet));
             base.OnSysCommand(ref packet);
         }
 
         protected override void OnSize(ref SizePacket packet)
         {
-            _resizeEvent.Publish(new ResizeEventData(packet));
+            Convert(packet.Size, out SizeF size);
+            _resizeEvent?.Publish(new ResizeEventData(size));
             base.OnSize(ref packet);
         }
 
         protected override void OnClose(ref Packet packet)
         {
-            _closeEvent.Publish(new CloseEventData());
+            _closeEvent?.Publish(new CloseEventData());
             base.OnClose(ref packet);
         }
 
         protected override void OnCreate(ref CreateWindowPacket packet)
         {
-            _createdEvent?.Publish(new CreatedEventData(Handle, GetClientSize()));
-            RedrawFrame();
             SetText("Terminal Velocity");
+
+            const int LOGPIXELSX = 88;
+            const int LOGPIXELSY = 90;
+
+            IntPtr hdc = User32Methods.GetDC(Handle);
+            _dpiScale = new SizeF(
+                WinApi.Gdi32.Gdi32Methods.GetDeviceCaps(hdc, LOGPIXELSX) / 96.0f,
+                WinApi.Gdi32.Gdi32Methods.GetDeviceCaps(hdc, LOGPIXELSY) / 96.0f
+            );
+            User32Methods.ReleaseDC(Handle, hdc);
+
+            Convert(GetClientSize(), out SizeF size);
+            _initializeEvent?.Publish(new InitializeEventData(Handle, size));
+            _createEvent?.Publish(new CreateEventData());
 
             base.OnCreate(ref packet);
         }
 
         protected override void OnPaint(ref PaintPacket packet)
         {
-            _renderEvent.Publish(new RenderEventData());
+            _renderEvent?.Publish(new RenderEventData());
             Validate();
+        }
+
+        private void Convert(in NetCoreEx.Geometry.Size sizeEx, out SizeF size)
+        {
+            SizeF dpi = _dpiScale;
+            size = new SizeF(
+                sizeEx.Width / _dpiScale.Width,
+                sizeEx.Height / _dpiScale.Height);
         }
     }
 }

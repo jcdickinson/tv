@@ -2,10 +2,10 @@
 
 namespace TerminalVelocity.Direct2D.DirectX
 {
-    public partial class DirectX
+    public partial class Surface
     {
         [Flags]
-        private enum DirectCompositionVariant : int
+        private enum CompositionType : int
         {
             Default = -1,
             WindowTarget = 0,
@@ -14,14 +14,14 @@ namespace TerminalVelocity.Direct2D.DirectX
             NativeComposited = Composited | Native,
         }
 
-        private static DirectCompositionVariant GetDirectCompositionVariant()
+        private static CompositionType GetCompositionType()
         {
             Version platformVersion = PlatformVersion;
-            if (platformVersion.Major > 6) return DirectCompositionVariant.NativeComposited;
+            if (platformVersion.Major > 6) return CompositionType.NativeComposited;
             if (platformVersion.Major == 6)
             {
-                if (platformVersion.Minor > 2) return DirectCompositionVariant.NativeComposited;
-                if (platformVersion.Minor > 1) return DirectCompositionVariant.Composited;
+                if (platformVersion.Minor > 2) return CompositionType.NativeComposited;
+                if (platformVersion.Minor > 1) return CompositionType.Composited;
             }
             return 0;
         }

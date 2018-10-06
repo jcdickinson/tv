@@ -20,7 +20,7 @@ namespace TerminalVelocity
             };
         }
 
-        protected override void OnEventPublished<T>(T e) => _eventReceived.Set();
+        protected override void OnEventPublished<T>(ulong eventId, in T e) => _eventReceived.Set();
 
         protected override void Dispose(bool disposing)
         {
@@ -37,7 +37,7 @@ namespace TerminalVelocity
 
         private void EventLoop()
         {
-            SynchronizationContext.SetSynchronizationContext(SynchronizationContext);
+            CreateSynchronizationContext();
 
             while (IsRunning)
             {

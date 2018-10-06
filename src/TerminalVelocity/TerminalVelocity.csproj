@@ -6,6 +6,6 @@
     <TieredCompilation>true</TieredCompilation>
   </PropertyGroup>
   <ItemGroup>
-    <PackageReference Include="SimpleInjector" Version="4.3.0"/>
+    <PackageReference Include="SimpleInjector" Version="4.3.0" />
   </ItemGroup>
 </Project>

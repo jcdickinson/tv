@@ -1,13 +1,12 @@
 ﻿using System;
-using System.Diagnostics;
-using NetCoreEx.Geometry;
+using SharpDX;
 using SharpDX.Direct3D;
 using SharpDX.Direct3D11;
 using DXGI = SharpDX.DXGI;
 
 namespace TerminalVelocity.Direct2D.DirectX
 {
-    public partial class DirectX
+    public partial class Surface
     {
         private struct D3D : IDisposable
         {
@@ -24,22 +23,24 @@ namespace TerminalVelocity.Direct2D.DirectX
                 RenderTargetView = default;
             }
 
-            public void Create(
-                IntPtr hwnd, 
-                Size size, 
-                DirectCompositionVariant variant)
+            public void CreateFactory()
             {
                 if (Device != null) Dispose();
-                
-                DeviceCreationFlags creationFlags =
-                    DeviceCreationFlags.BgraSupport |
-                    DeviceCreationFlags.SingleThreaded |
-                    DebugSelect(DeviceCreationFlags.Debug, DeviceCreationFlags.None);
+            }
+
+            public void Create(
+                IntPtr hwnd, 
+                Size2 size, 
+                CompositionType compositionType)
+            {
+                DebugSelect(DeviceCreationFlags.Debug, DeviceCreationFlags.None,
+                    out DeviceCreationFlags creationFlags);
+                creationFlags |= DeviceCreationFlags.BgraSupport | DeviceCreationFlags.SingleThreaded;
                 
                 Device = CreateDevice(creationFlags);                
                 Context = Device.ImmediateContext1;
 
-                Dxgi().Initialize(Device.QueryInterface<DXGI.Device2>(), hwnd, variant, size);
+                Dxgi().Initialize(Device.QueryInterface<DXGI.Device2>(), hwnd, compositionType, size);
 
                 Connect();
             }
@@ -72,13 +73,13 @@ namespace TerminalVelocity.Direct2D.DirectX
             {
                 if (Context == null) return;
                 Context.OutputMerger.SetRenderTargets((RenderTargetView)null);
-                DisposableHelpers.Dispose(ref RenderTargetView);
+                Disposable.Dispose(ref RenderTargetView);
             }
 
             public void Dispose()
             {
                 Disconnect();
-                DisposableHelpers.Dispose(ref Device);
+                Disposable.Dispose(ref Device);
             }
         }
     }

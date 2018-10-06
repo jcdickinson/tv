@@ -1,5 +1,6 @@
 ﻿using System;
 using SimpleInjector;
+using TerminalVelocity.Renderer;
 
 namespace TerminalVelocity.Direct2D
 {
@@ -17,10 +18,12 @@ namespace TerminalVelocity.Direct2D
             container.RegisterSingleton<RenderWindow>();
             container.RegisterInitializer<RenderWindow>(window => factory.CreateWindowEx(() => window));
 
-            container.RegisterSingleton<DirectX.DirectX>();
+            container.RegisterSingleton<DirectX.Surface>();
+            container.RegisterAlternateInterface<ISurface, DirectX.Surface>();
 
             container.RegisterEventLoop<UIEventLoop>();
-            container.RegisterEventLoop<RenderEventLoop>();
+
+            container.RegisterEventLoop<RenderEventLoop, DirectX.DirectXRenderEventLoop>();
         }
     }
 }

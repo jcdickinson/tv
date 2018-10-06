@@ -2,7 +2,6 @@
 using System.Collections.Concurrent;
 using System.Diagnostics;
 using System.Threading;
-using System.Threading.Tasks;
 using TerminalVelocity.Collections.Concurrent;
 
 namespace TerminalVelocity.Eventing
@@ -89,13 +88,13 @@ namespace TerminalVelocity.Eventing
 
         public void Publish(TEvent data)
         {
+            var id = (ulong)Interlocked.Increment(ref _idFactory);
             if (_eventLoop == null)
             {
                 Publish(data);
             }
-            else
+            else if (_eventLoop.OnEventPublishing((ulong)id, ref data))
             {
-                var id = (ulong)Interlocked.Increment(ref _idFactory);
                 _events.Enqueue(new EventPublication(id, data));
                 _eventLoop.Publish(id, this, data);
             }
@@ -123,7 +122,12 @@ namespace TerminalVelocity.Eventing
                 _events.TryDequeue(out publication);
 
                 //Debug.WriteLine(publication.Data.ToString(), Name);
-                if (PublishEvent(publication.Data) == EventStatus.Halt)
+                TEvent data = publication.Data;
+                _eventLoop?.OnEventExecuting(publication.Id, ref data);
+                EventStatus status = PublishEvent(publication.Data);
+                _eventLoop?.OnEventExecuted(publication.Id, data, status);
+
+                if (status == EventStatus.Halt)
                     return EventStatus.Halt;
             }
 
@@ -139,5 +143,11 @@ namespace TerminalVelocity.Eventing
             }
             return EventStatus.Continue;
         }
+
+        public sealed override bool Equals(object obj) => base.Equals(obj);
+
+        public sealed override int GetHashCode() => base.GetHashCode();
+
+        public sealed override string ToString() => Name;
     }
 }

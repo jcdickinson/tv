@@ -15,6 +15,7 @@ namespace TerminalVelocity.Direct2D
                 TerminalVelocity.Setup.SetupContainer(container);
                 
                 IOrderedEnumerable<EventLoop> loops = container.GetAllInstances<EventLoop>().OrderBy(x => x.Priority);
+                Enumerate(container.GetAllInstances<Plugins.IPlugin>());
 
                 foreach (EventLoop eventLoop in loops)
                 {
@@ -23,6 +24,11 @@ namespace TerminalVelocity.Direct2D
             }
 
             return 0;
+        }
+
+        private static void Enumerate<T>(IEnumerable<T> enumerable)
+        {
+            foreach (T item in enumerable) ;
         }
     }
 }

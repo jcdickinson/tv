@@ -61,7 +61,7 @@ namespace TerminalVelocity.Direct2D
             _eventLoopMessage = NativeMethods.CreateMessage();
         }
 
-        protected override void OnEventPublished<T>(T e) => User32Methods.SendMessage(
+        protected override void OnEventPublished<T>(ulong eventId, in T e) => User32Methods.SendMessage(
                 _renderWindow.Handle,
                 _eventLoopMessage.Value,
                 _eventLoopMessage.WParam,
@@ -69,7 +69,7 @@ namespace TerminalVelocity.Direct2D
 
         public override void Execute()
         {
-            SynchronizationContext.SetSynchronizationContext(SynchronizationContext);
+            CreateSynchronizationContext();
             _renderWindow.Show();
 
             var result = 0;

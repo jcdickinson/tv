@@ -6,10 +6,9 @@ namespace TerminalVelocity.Eventing
 {
     public abstract class EventLoop : IDisposable
     {
-        protected sealed class DisposeEvent
+        protected readonly struct DisposeEvent
         {
-            internal static readonly DisposeEvent Instance = new DisposeEvent();
-            private DisposeEvent() { }
+
         }
 
         private readonly struct EventPublication
@@ -26,17 +25,27 @@ namespace TerminalVelocity.Eventing
 
         private readonly ConcurrentQueue<EventPublication> _events;
         private readonly CancellationTokenSource _cancellationToken;
-        protected SynchronizationContext SynchronizationContext { get; }
-        public abstract int Priority { get; }
+        private EventLoopSynchronizationContext _synchronizationContext;
 
+        public abstract int Priority { get; }
         protected bool IsRunning => !_cancellationToken.IsCancellationRequested;
         protected CancellationToken CancellationToken => _cancellationToken.Token;
+        protected SynchronizationContext SynchronizationContext => _synchronizationContext;
+
+        public bool IsOnEventLoopThread => _synchronizationContext == null
+            ? false
+            : Thread.CurrentThread.ManagedThreadId == _synchronizationContext.ManagedThreadId;
 
         public EventLoop()
         {
             _events = new ConcurrentQueue<EventPublication>();
             _cancellationToken = new CancellationTokenSource();
-            SynchronizationContext = new EventLoopSynchronizationContext(this);
+        }
+
+        protected void CreateSynchronizationContext()
+        {
+            _synchronizationContext = new EventLoopSynchronizationContext(this);
+            SynchronizationContext.SetSynchronizationContext(_synchronizationContext);
         }
 
         public abstract void Execute();
@@ -46,16 +55,9 @@ namespace TerminalVelocity.Eventing
             // Make sure finally runs.
             using (_cancellationToken)
             {
+                OnEventPublished(0, new DisposeEvent());
                 _cancellationToken.Cancel();
-                OnEventPublished(DisposeEvent.Instance);
-                while (_events.TryDequeue(out EventPublication @event))
-                {
-                    try
-                    {
-                        @event.Event.PublishEvent(@event.Id);
-                    }
-                    catch (OperationCanceledException) { }
-                }
+                OnEventPublished(0, new DisposeEvent());
                 Dispose(true);
             }
         }
@@ -67,12 +69,26 @@ namespace TerminalVelocity.Eventing
 
         internal void Publish<TEvent, TPayload>(ulong id, TEvent @event, TPayload e)
             where TEvent : IEvent
+            where TPayload : struct
         {
             _events.Enqueue(new EventPublication(id, @event));
-            OnEventPublished(e);
+            OnEventPublished(id, e);
         }
 
-        protected abstract void OnEventPublished<T>(T e);
+        protected internal virtual bool OnEventPublishing<TEvent>(ulong eventId, ref TEvent e)
+            where TEvent : struct
+            => true;
+
+        protected abstract void OnEventPublished<T>(ulong eventId, in T e)
+            where T : struct;
+
+        protected internal virtual void OnEventExecuting<T>(ulong eventId, ref T e)
+            where T : struct
+        { }
+
+        protected internal virtual void OnEventExecuted<T>(ulong eventId, in T e, EventStatus eventStatus)
+            where T : struct
+        { }
 
         protected void ExecuteEvents()
         {

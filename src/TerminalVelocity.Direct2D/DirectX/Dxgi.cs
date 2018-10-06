@@ -1,25 +1,23 @@
 ﻿using System;
-using NetCoreEx.Geometry;
+using SharpDX;
 using SharpDX.DXGI;
 
 namespace TerminalVelocity.Direct2D.DirectX
 {
-    public partial class DirectX
+    public partial class Surface
     {
         private struct Dxgi : IDisposable
         {
-            public DirectCompositionVariant Variant;
             public Adapter Adapter;
             public Factory2 Factory;
             public Device2 Device;
             public SwapChain1 SwapChain;
 
-            public void Initialize(Device2 device, IntPtr hwnd, DirectCompositionVariant variant, Size size)
+            public void Initialize(Device2 device, IntPtr hwnd, CompositionType compositionType, Size2 size)
             {
                 if (Device != null) Dispose();
 
                 Device = device;
-                Variant = variant;
                 Adapter = Device.GetParent<Adapter>();
                 Factory = Adapter.GetParent<Factory2>();
 
@@ -31,28 +29,28 @@ namespace TerminalVelocity.Direct2D.DirectX
                     SwapEffect = GetBestSwapEffectForPlatform(),
                     Scaling = Scaling.Stretch,
                     Format = Format.B8G8R8A8_UNorm,
-                    AlphaMode = variant.HasFlag(DirectCompositionVariant.Composited)
+                    AlphaMode = compositionType.HasFlag(CompositionType.Composited)
                         ? AlphaMode.Premultiplied
                         : AlphaMode.Ignore,
                     Width = size.Width,
                     Height = size.Height
                 };
 
-                SwapChain = variant.HasFlag(DirectCompositionVariant.Composited)
+                SwapChain = compositionType.HasFlag(CompositionType.Composited)
                     ? new SwapChain1(Factory, Device, ref swapChainDescription)
                     : new SwapChain1(Factory, Device, hwnd, ref swapChainDescription);
             }
 
-            public void Resize(Size size)
+            public void Resize(Size2 size)
             {
                 SwapChain?.ResizeBuffers(0, size.Width, size.Height, Format.Unknown, SwapChainFlags.None);
             }
 
             public void Dispose()
             {
-                DisposableHelpers.Dispose(ref Factory);
-                DisposableHelpers.Dispose(ref Device);
-                DisposableHelpers.Dispose(ref SwapChain);
+                Disposable.Dispose(ref Factory);
+                Disposable.Dispose(ref Device);
+                Disposable.Dispose(ref SwapChain);
             }
 
             private static SwapEffect GetBestSwapEffectForPlatform()

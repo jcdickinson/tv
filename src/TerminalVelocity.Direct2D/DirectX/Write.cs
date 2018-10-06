@@ -3,13 +3,13 @@ using SharpDX.DirectWrite;
 
 namespace TerminalVelocity.Direct2D.DirectX
 {
-    public partial class DirectX
+    public partial class Surface
     {
         private struct Write : IDisposable
         {
             public Factory Factory;
 
-            public void Create()
+            public void CreateFactory()
             {
                 if (Factory != null) Dispose();
 
@@ -17,7 +17,9 @@ namespace TerminalVelocity.Direct2D.DirectX
             }
 
             public void Dispose()
-                => DisposableHelpers.Dispose(ref Factory);
+                => Disposable.Dispose(ref Factory);
+
+            public void Create() { }
         }
     }
 }

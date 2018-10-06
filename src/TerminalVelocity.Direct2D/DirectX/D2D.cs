@@ -1,12 +1,10 @@
 ﻿using System;
-using System.Diagnostics;
-using System.Threading;
 using SharpDX.Direct2D1;
 using DXGI = SharpDX.DXGI;
 
 namespace TerminalVelocity.Direct2D.DirectX
 {
-    public partial class DirectX
+    public partial class Surface
     {
         private struct D2D : IDisposable
         {
@@ -14,6 +12,7 @@ namespace TerminalVelocity.Direct2D.DirectX
             public Factory1 Factory;
             public Device Device;
             public DeviceContext Context;
+            private CreationProperties CreationProperties;
 
             public D2D(Ref<Dxgi> dxgi)
             {
@@ -21,22 +20,26 @@ namespace TerminalVelocity.Direct2D.DirectX
                 Factory = default;
                 Device = default;
                 Context = default;
+
+                CreationProperties = new CreationProperties()
+                {
+                    Options = DeviceContextOptions.EnableMultithreadedOptimizations,
+                    ThreadingMode = ThreadingMode.SingleThreaded
+                };
+                DebugSelect(DebugLevel.Warning, DebugLevel.Error, out CreationProperties.DebugLevel);
+            }
+
+            public void CreateFactory()
+            {
+                if (Factory != null) Dispose();
+
+                Factory = new Factory1(FactoryType.SingleThreaded, CreationProperties.DebugLevel);
             }
 
             public void Create()
             {
-                if (Device != null) Dispose();
-
-                var creationOptions = new CreationProperties()
-                {
-                    DebugLevel = DebugSelect(DebugLevel.Warning, DebugLevel.Error),
-                    Options = DeviceContextOptions.EnableMultithreadedOptimizations,
-                    ThreadingMode = ThreadingMode.SingleThreaded
-                };
-
-                Factory = new Factory1(FactoryType.SingleThreaded, creationOptions.DebugLevel);
-                Device = new Device(Dxgi().Device, creationOptions);
-                Context = new DeviceContext(Device, creationOptions.Options);
+                Device = new Device(Dxgi().Device, CreationProperties);
+                Context = new DeviceContext(Device, CreationProperties.Options);
 
                 Connect();
             }
@@ -64,9 +67,9 @@ namespace TerminalVelocity.Direct2D.DirectX
             {
                 Disconnect();
 
-                DisposableHelpers.Dispose(ref Context);
-                DisposableHelpers.Dispose(ref Device);
-                DisposableHelpers.Dispose(ref Factory);
+                Disposable.Dispose(ref Context);
+                Disposable.Dispose(ref Device);
+                Disposable.Dispose(ref Factory);
             }
         }
     }

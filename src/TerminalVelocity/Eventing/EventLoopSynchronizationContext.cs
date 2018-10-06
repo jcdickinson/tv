@@ -35,24 +35,27 @@ namespace TerminalVelocity.Eventing
         private readonly EventLoop _eventLoop;
         private readonly ConcurrentQueue<SynchronizationEventData> _events;
         private long _idFactory;
-        private readonly Thread _thread;
+
+        public int ManagedThreadId { get; }
 
         public EventLoopSynchronizationContext(EventLoop eventLoop)
-            : this(eventLoop, Thread.CurrentThread)
+            : this(eventLoop, Thread.CurrentThread.ManagedThreadId)
         {
 
         }
 
-        private EventLoopSynchronizationContext(EventLoop eventLoop, Thread thread)
+        private EventLoopSynchronizationContext(EventLoop eventLoop, int managedThreadId)
         {
-            _thread = thread;
+            ManagedThreadId = managedThreadId;
             _eventLoop = eventLoop;
             _events = new ConcurrentQueue<SynchronizationEventData>();
         }
 
         EventStatus IEvent.PublishEvent(ulong eventId)
         {
-            while (_events.TryPeek(out SynchronizationEventData publication) && publication.Id <= eventId)
+            while (
+                _events.TryPeek(out SynchronizationEventData publication) && 
+                publication.Id <= eventId)
             {
                 // Only occurs on one thread.
                 _events.TryDequeue(out publication);
@@ -63,7 +66,7 @@ namespace TerminalVelocity.Eventing
 
         private void PostOrSend(SendOrPostCallback d, object state, bool wait)
         {
-            if (Thread.CurrentThread == _thread)
+            if (Thread.CurrentThread.ManagedThreadId == ManagedThreadId)
             {
                 d(state);
                 return;

@@ -5,12 +5,12 @@ using SharpDX.DirectComposition;
 
 namespace TerminalVelocity.Direct2D.DirectX
 {
-    public partial class DirectX
+    public partial class Surface
     {
         private struct Compositor
         {
             public readonly Ref<Dxgi> Dxgi;
-            public DirectCompositionVariant Variant;
+            public CompositionType CompositionType;
             public ComObject Device;
             public Target Target;
             public Visual Visual;
@@ -18,20 +18,20 @@ namespace TerminalVelocity.Direct2D.DirectX
             public Compositor(Ref<Dxgi> dxgi)
             {
                 Dxgi = dxgi;
-                Variant = default;
+                CompositionType = default;
                 Device = default;
                 Target = default;
                 Visual = default;
             }
 
-            public void Create(IntPtr hwnd, DirectCompositionVariant variant)
+            public void Create(IntPtr hwnd, CompositionType compositionType)
             {
-                Variant = variant;
-                Device = Variant.HasFlag(DirectCompositionVariant.Native)
+                CompositionType = compositionType;
+                Device = CompositionType.HasFlag(CompositionType.Native)
                     ? new DesktopDevice(Dxgi().Device)
                     : (ComObject)new Device(Dxgi().Device);
 
-                if (Variant.HasFlag(DirectCompositionVariant.Native))
+                if (CompositionType.HasFlag(CompositionType.Native))
                 {
                     var device = (DesktopDevice)Device;
                     Target = Target.FromHwnd(device, hwnd, false);
@@ -57,7 +57,7 @@ namespace TerminalVelocity.Direct2D.DirectX
 
             public void Commit()
             {
-                if (Variant.HasFlag(DirectCompositionVariant.Native))
+                if (CompositionType.HasFlag(CompositionType.Native))
                     ((DesktopDevice)Device).Commit();
                 else
                     ((Device)Device).Commit();
