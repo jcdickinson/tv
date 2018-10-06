@@ -8,15 +8,28 @@
     <AssemblyName>tv</AssemblyName>
   </PropertyGroup>
   <ItemGroup>
-    <PackageReference Include="WinApi.DxUtils" Version="4.0.0"/>
-    <PackageReference Include="SharpDX.Direct3D11" Version="4.0.1"/>
-    <PackageReference Include="SharpDX.Mathematics" Version="4.0.1"/>
-    <PackageReference Include="Microsoft.Composition" Version="1.0.31"/>
+    <Compile Remove="BrushProvider.cs" />
+    <Compile Remove="FontProvider.cs" />
+    <Compile Remove="SceneRoot.cs" />
+    <Compile Remove="UI\GridView.cs" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="BrushProvider.cs" />
+    <None Include="FontProvider.cs" />
+    <None Include="SceneRoot.cs" />
+    <None Include="UI\GridView.cs" />
+  </ItemGroup>
+  <ItemGroup>
+    <PackageReference Include="SharpDX.Direct2D1" Version="4.2.0" />
+    <PackageReference Include="SharpDX.Direct3D11" Version="4.2.0" />
+    <PackageReference Include="SharpDX.DirectComposition" Version="4.2.0" />
+    <PackageReference Include="SharpDX.Mathematics" Version="4.2.0" />
     <PackageReference Include="NSubsys" Version="0.7.0-build20180604-0047">
       <PrivateAssets>all</PrivateAssets>
     </PackageReference>
+    <PackageReference Include="WinApi" Version="4.0.0" />
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\TerminalVelocity\TerminalVelocity.csproj"/>
+    <ProjectReference Include="..\TerminalVelocity\TerminalVelocity.csproj" />
   </ItemGroup>
 </Project>

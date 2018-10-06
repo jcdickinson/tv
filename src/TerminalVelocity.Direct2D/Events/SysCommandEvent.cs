@@ -1,20 +1,25 @@
-using System;
+﻿using System;
+using TerminalVelocity.Eventing;
 using WinApi.User32;
 using WinApi.Windows;
 
 namespace TerminalVelocity.Direct2D.Events
 {
-    public struct SysCommandEvent
+    [Event]
+    public sealed class SysCommandEvent : Event<InteractionEventLoop, SysCommandEventData>
     {
-        public const string ContractName = "SysCommand.Events.Direct2D.TerminalVelocity";
+        public SysCommandEvent(InteractionEventLoop eventLoop) : base(eventLoop) { }
+    }
 
+    public struct SysCommandEventData
+    {
         public readonly short X;
         public readonly short Y;
         public readonly SysCommand Command;
         public readonly bool IsAccelerator;
         public readonly bool IsMnemonic;
 
-        public SysCommandEvent(in SysCommandPacket packet)
+        public SysCommandEventData(in SysCommandPacket packet)
         {
             X = packet.X;
             Y = packet.Y;
@@ -22,7 +27,7 @@ namespace TerminalVelocity.Direct2D.Events
             IsAccelerator = packet.IsAccelerator;
             IsMnemonic = packet.IsMnemonic;
         }
-        
+
         public override string ToString()
         {
             var accel = IsAccelerator ? " Accelerator " : string.Empty;

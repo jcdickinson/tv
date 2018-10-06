@@ -1,21 +1,27 @@
-using System;
+﻿using System;
+using TerminalVelocity.Eventing;
 
 namespace TerminalVelocity.Emulator.Events
 {
-    public readonly struct StateEvent
+    [Event]
+    public sealed class StateEvent : Event<InteractionEventLoop, StateEventData>
     {
-        public const string ContractName = "State.Events.Emulator.TerminalVelocity";
+        public StateEvent(InteractionEventLoop eventLoop) : base(eventLoop) { }
 
+        public StateEvent(EventSubscriber<StateEventData> handler) : base(handler) { }
+
+        public StateEvent(Action<StateEventData> handler) : base(handler) { }
+    }
+
+    public readonly struct StateEventData
+    {
         public readonly States States;
 
         public readonly StateMode Mode;
 
-        public StateEvent(StateMode mode, States states)
-        {
-            States = states;
-            Mode = mode;
-        }
-        
+        public StateEventData(StateMode mode, States states)
+            => (Mode, States) = (mode, states);
+
         public override string ToString() => FormattableString.Invariant($"{Mode} {States}");
     }
 }

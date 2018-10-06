@@ -1,12 +1,21 @@
-using System;
+﻿using System;
 using System.Text;
+using TerminalVelocity.Eventing;
 
 namespace TerminalVelocity.VT.Events
 {
-    public readonly struct ControlSequenceEvent
+    [Event]
+    public sealed class ControlSequenceEvent : Event<InteractionEventLoop, ControlSequenceEventData>
     {
-        public const string ContractName = "CSI.Events.VT.TerminalVelocity";
+        public ControlSequenceEvent(InteractionEventLoop eventLoop) : base(eventLoop) { }
 
+        public ControlSequenceEvent(EventSubscriber<ControlSequenceEventData> handler) : base(handler) { }
+
+        public ControlSequenceEvent(Action<ControlSequenceEventData> handler) : base(handler) { }
+    }
+
+    public readonly struct ControlSequenceEventData
+    {
         public readonly char Character;
 
         public readonly ReadOnlyMemory<byte> Intermediates;
@@ -15,17 +24,12 @@ namespace TerminalVelocity.VT.Events
 
         public readonly ReadOnlyMemory<long> Parameters;
 
-        public ControlSequenceEvent(
+        public ControlSequenceEventData(
             ReadOnlyMemory<byte> intermediates,
             ReadOnlyMemory<long> parameters,
             IgnoredData ignored,
             char character)
-        {
-            Character = character;
-            Intermediates = intermediates;
-            Parameters = parameters;
-            Ignored = ignored;
-        }
+            => (Intermediates, Parameters, Ignored, Character) = (intermediates, parameters, ignored, character);
 
         public override string ToString()
         {
@@ -38,7 +42,7 @@ namespace TerminalVelocity.VT.Events
                 sb.Append(i == 0 ? string.Empty : ";");
                 sb.Append(Parameters.Span[i].ToString("x2"));
             }
-            
+
             if (Ignored.HasFlag(IgnoredData.Parameters))
                 sb.Append("...");
 
@@ -47,7 +51,7 @@ namespace TerminalVelocity.VT.Events
             sb.Append(Encoding.ASCII.GetString(Intermediates.Span));
             if (Ignored.HasFlag(IgnoredData.Intermediates))
                 sb.Append("...");
-            
+
             sb.Append("]");
 
             return sb.ToString();

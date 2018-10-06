@@ -1,18 +1,24 @@
-using System;
+﻿using System;
+using TerminalVelocity.Eventing;
 
 namespace TerminalVelocity.Emulator.Events
 {
-    public readonly struct SetWindowTitleEvent
+    [Event]
+    public sealed class SetWindowTitleEvent : Event<InteractionEventLoop, SetWindowTitleEventData>
     {
-        public const string ContractName = "SetWindowTitle.Events.Emulator.TerminalVelocity";
+        public SetWindowTitleEvent(InteractionEventLoop eventLoop) : base(eventLoop) { }
 
+        public SetWindowTitleEvent(EventSubscriber<SetWindowTitleEventData> handler) : base(handler) { }
+
+        public SetWindowTitleEvent(Action<SetWindowTitleEventData> handler) : base(handler) { }
+    }
+
+    public readonly struct SetWindowTitleEventData
+    {
         public readonly ReadOnlyMemory<char> Characters;
 
-        public SetWindowTitleEvent(ReadOnlyMemory<char> characters)
-        {
-            Characters = characters;
-        }
-        
+        public SetWindowTitleEventData(ReadOnlyMemory<char> characters) => Characters = characters;
+
         public override string ToString() => new string(Characters.Span);
     }
 }

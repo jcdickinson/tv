@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Text;
 
 namespace TerminalVelocity.VT
@@ -6,7 +6,7 @@ namespace TerminalVelocity.VT
     internal readonly struct ParserUtf8
     {
         // https://bjoern.hoehrmann.de/utf-8/decoder/dfa/
-        
+
         private const char Unknown = '\uFFFD';
         private readonly Decoder _utf8;
         private readonly byte[] _buffer;

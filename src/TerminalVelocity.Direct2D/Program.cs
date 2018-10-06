@@ -1,24 +1,28 @@
-﻿using System;
-using System.Composition.Hosting;
-using System.Reflection;
-using TerminalVelocity.Direct2D;
+﻿using System.Collections.Generic;
+using System.Linq;
+using SimpleInjector;
+using TerminalVelocity.Eventing;
 
 namespace TerminalVelocity.Direct2D
 {
     internal static class Program
     {
-        static int Main(string[] args)
+        private static int Main(string[] args)
         {
-            var configuration = new ContainerConfiguration()
-                .WithAssembly(typeof(Program).Assembly);
-            TerminalVelocity.Setup.SetupContainer(configuration);
-
-            using (var container = configuration.CreateContainer())
+            using (var container = new Container())
             {
-                ContainerProvider._compositionHost = container;
-                var app = container.GetExport<Application>();
-                return app.Run();
+                Setup.SetupContainer(container);
+                TerminalVelocity.Setup.SetupContainer(container);
+                
+                IOrderedEnumerable<EventLoop> loops = container.GetAllInstances<EventLoop>().OrderBy(x => x.Priority);
+
+                foreach (EventLoop eventLoop in loops)
+                {
+                    eventLoop.Execute();
+                }
             }
+
+            return 0;
         }
     }
 }

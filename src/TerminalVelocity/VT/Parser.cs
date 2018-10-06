@@ -1,5 +1,5 @@
-using System;
-using System.Composition;
+﻿using System;
+using TerminalVelocity.Eventing;
 using TerminalVelocity.Pty.Events;
 using TerminalVelocity.VT.Events;
 
@@ -7,7 +7,36 @@ namespace TerminalVelocity.VT
 {
     // https://github.com/jwilm/vte/blob/master/src/lib.rs
 
-    [Shared]
+    public sealed class ParserOptions
+    {
+        private int _maxIntermediates = 2;
+        private int _maxOsCommandRaw = 1024;
+        private int _maxParameters = 16;
+
+        public int MaxIntermediates
+        {
+            get => _maxIntermediates;
+            set => _maxIntermediates = value > 0 ? value : throw new ArgumentOutOfRangeException(nameof(value));
+        }
+
+        public int MaxOsCommandRaw
+        {
+            get => _maxOsCommandRaw;
+            set => _maxOsCommandRaw = value > 0 ? value : throw new ArgumentOutOfRangeException(nameof(value));
+        }
+
+        public int MaxParameters
+        {
+            get => _maxParameters;
+            set => _maxParameters = value > 0 ? value : throw new ArgumentOutOfRangeException(nameof(value));
+        }
+
+        public ParserOptions()
+        {
+
+        }
+    }
+
     public sealed class Parser
     {
         [Flags]
@@ -19,30 +48,15 @@ namespace TerminalVelocity.VT
             IgnoringParameters = 0b0000_00010,
             Ignoring = IgnoringIntermediates | IgnoringParameters
         }
-        
-        [Import(ControlSequenceEvent.ContractName)]
-        public Event<ControlSequenceEvent> ControlSequence { private get; set; }
-        
-        [Import(EscapeSequenceEvent.ContractName)]
-        public Event<EscapeSequenceEvent> EscapeSequence { private get; set; }
-        
-        [Import(ExecuteEvent.ContractName)]
-        public Event<ExecuteEvent> Execute { private get; set; }
 
-        [Import(HookEvent.ContractName)]
-        public Event<HookEvent> Hook { private get; set; }
-
-        [Import(OsCommandEvent.ContractName)]
-        public Event<OsCommandEvent> OsCommand { private get; set; }
-
-        [Import(PrintEvent.ContractName)]
-        public Event<PrintEvent> Print { private get; set; }
-
-        [Import(PutEvent.ContractName)]
-        public Event<PutEvent> Put { private get; set; }
-        
-        [Import(UnhookEvent.ContractName)]
-        public Event<UnhookEvent> Unhook { private get; set; }
+        private readonly ControlSequenceEvent _controlSequenceEvent;
+        private readonly EscapeSequenceEvent _escapeSequenceEvent;
+        private readonly ExecuteEvent _executeEvent;
+        private readonly HookEvent _hookEvent;
+        private readonly OsCommandEvent _osCommandEvent;
+        private readonly PrintEvent _printEvent;
+        private readonly PutEvent _putEvent;
+        private readonly UnhookEvent _unhookEvent;
 
         private ParserState _state;
         private readonly byte[] _intermediates;
@@ -60,32 +74,44 @@ namespace TerminalVelocity.VT
         private int _oscNumParams;
 
         public Parser(
-            int maxIntermediates = 2,
-            int maxOscRaw = 1024,
-            int maxParams = 16)
+            ParserOptions options = null,
+            ReceiveEvent onReceiveEvent = null,
+
+            ControlSequenceEvent controlSequenceEvent = null,
+            EscapeSequenceEvent escapeSequenceEvent = null,
+            ExecuteEvent executeEvent = null,
+            HookEvent hookEvent = null,
+            OsCommandEvent osCommandEvent = null,
+            PrintEvent printEvent = null,
+            PutEvent putEvent = null,
+            UnhookEvent unhookEvent = null)
         {
-            if (maxIntermediates < 0) throw new ArgumentOutOfRangeException(nameof(maxIntermediates));
-            if (maxOscRaw < 0) throw new ArgumentOutOfRangeException(nameof(maxOscRaw));
-            if (maxParams < 0) throw new ArgumentOutOfRangeException(nameof(maxParams));
+            _controlSequenceEvent = controlSequenceEvent;
+            _escapeSequenceEvent = escapeSequenceEvent;
+            _executeEvent = executeEvent;
+            _hookEvent = hookEvent;
+            _osCommandEvent = osCommandEvent;
+            _printEvent = printEvent;
+            _putEvent = putEvent;
+            _unhookEvent = unhookEvent;
 
             _state = ParserState.Ground;
-            _intermediates = new byte[maxIntermediates];
-            _params = new long[maxParams];
-            _oscRaw = new byte[maxOscRaw];
-            _oscParams = new ReadOnlyMemory<byte>[maxParams];
+            _intermediates = new byte[options?.MaxIntermediates ?? 2];
+            _params = new long[options?.MaxParameters ?? 16];
+            _oscRaw = new byte[options?.MaxOsCommandRaw ?? 1024];
+            _oscParams = new ReadOnlyMemory<byte>[options?.MaxParameters ?? 16];
 
             _utf8 = new ParserUtf8(true);
+
+            onReceiveEvent?.Subscribe(OnReceiveEvent);
         }
 
-        [Import(ReceiveEvent.ContractName)]
-        public Event<ReceiveEvent> OnReceive
+        public EventStatus OnReceiveEvent(in ReceiveEventData receive)
         {
-            set => value.Subscribe((ref ReceiveEvent receive) =>
-            {
-                var next = receive.Data.Span;
-                for (var i = 0; i < next.Length; i++)
-                    Process(next[i]);
-            });
+            ReadOnlySpan<byte> next = receive.Data.Span;
+            for (var i = 0; i < next.Length; i++)
+                Process(next[i]);
+            return EventStatus.Continue;
         }
 
         private void Process(byte next)
@@ -98,7 +124,7 @@ namespace TerminalVelocity.VT
 
             // Handle state changes in the anywhere state before evaluating changes
             // for current state.
-            var change = ParserState.Anywhere.GetStateChange(next);
+            ParserStateAction change = ParserState.Anywhere.GetStateChange(next);
             if (change.IsEmpty)
                 change = _state.GetStateChange(next);
 
@@ -107,10 +133,10 @@ namespace TerminalVelocity.VT
 
         private void ProcessUtf8(byte next)
         {
-            if (!_utf8.Process(next, out var result))
+            if (!_utf8.Process(next, out ReadOnlyMemory<char> result))
                 return;
 
-            Print.Publish(new PrintEvent(result));
+            _printEvent?.Publish(new PrintEventData(result));
             _state = ParserState.Ground;
         }
 
@@ -133,32 +159,32 @@ namespace TerminalVelocity.VT
         {
             if (change.Action == ParserAction.None)
                 return;
-                
-            var (_, action) = change;
+
+            (ParserState _, ParserAction action) = change;
 
             switch (action)
             {
                 case ParserAction.Print:
-                    Print.Publish(new PrintEvent(_utf8.Provide(next)));
+                    _printEvent?.Publish(new PrintEventData(_utf8.Provide(next)));
                     return;
                 case ParserAction.Execute:
-                    Execute.Publish(new ExecuteEvent((ControlCode)next));
+                    _executeEvent?.Publish(new ExecuteEventData((ControlCode)next));
                     return;
                 case ParserAction.Hook:
                     if (_options.HasFlag(ParseOptions.CollectingParameters))
                         _params[_numParams++] = _param;
-                        
-                    Hook.Publish(new HookEvent(
-                        _params.AsMemory(0, _numParams), 
-                        _intermediates.AsMemory(0, _intermediateIndex), 
+
+                    _hookEvent?.Publish(new HookEventData(
+                        _params.AsMemory(0, _numParams),
+                        _intermediates.AsMemory(0, _intermediateIndex),
                         (IgnoredData)(byte)(_options & ParseOptions.Ignoring)));
-                        
+
                     _numParams = 0;
                     _param = 0;
                     _options &= ~ParseOptions.CollectingParameters;
                     return;
                 case ParserAction.Put:
-                    Put.Publish(new PutEvent(next));
+                    _putEvent?.Publish(new PutEventData(next));
                     return;
                 case ParserAction.OscStart:
                     _oscIndex = 0;
@@ -201,37 +227,35 @@ namespace TerminalVelocity.VT
 
                     if (_oscNumParams == _oscParams.Length)
                         _options |= ParseOptions.IgnoringParameters;
-                    // First param is special - 0 to current byte index
-                    else if (_oscNumParams == 0)
-                        _oscParams[_oscNumParams++] = _oscRaw.AsMemory(0, _oscIndex);
-                    // All other params depend on previous indexing
                     else
-                        _oscParams[_oscNumParams++] = _oscRaw.AsMemory(_previousOscEnd, _oscIndex - _previousOscEnd);
+                        _oscParams[_oscNumParams++] = _oscNumParams == 0
+                            ? (ReadOnlyMemory<byte>)_oscRaw.AsMemory(0, _oscIndex)
+                            : (ReadOnlyMemory<byte>)_oscRaw.AsMemory(_previousOscEnd, _oscIndex - _previousOscEnd);
 
-                    OsCommand.Publish(new OsCommandEvent(
+                    _osCommandEvent?.Publish(new OsCommandEventData(
                         _oscParams.AsMemory(0, _oscNumParams),
                         (IgnoredData)(byte)(_options & ParseOptions.Ignoring)));
                     return;
                 case ParserAction.Unhook:
-                    Unhook.Publish(default);
+                    _unhookEvent?.Publish(default);
                     return;
                 case ParserAction.CsiDispatch:
                     if (_options.HasFlag(ParseOptions.CollectingParameters))
                         _params[_numParams++] = _param;
 
-                    ControlSequence.Publish(new ControlSequenceEvent(
+                    _controlSequenceEvent?.Publish(new ControlSequenceEventData(
                         _intermediates.AsMemory(0, _intermediateIndex),
                         _params.AsMemory(0, _numParams),
                         (IgnoredData)(byte)(_options & ParseOptions.Ignoring),
                         (char)next
                     ));
-                    
+
                     _numParams = 0;
                     _param = 0;
                     _options &= ~ParseOptions.CollectingParameters;
                     return;
                 case ParserAction.EscDispatch:
-                    EscapeSequence.Publish(new EscapeSequenceEvent(
+                    _escapeSequenceEvent?.Publish(new EscapeSequenceEventData(
                         (EscapeCommand)next,
                         _intermediates.AsMemory(0, _intermediateIndex),
                         (IgnoredData)(byte)(_options & ParseOptions.Ignoring)
@@ -280,12 +304,11 @@ namespace TerminalVelocity.VT
         private static void MulAdd(ref long a, int b)
         {
             var na = (a * 10) + b;
-            if (a < 0 && na >= 0)
-                a = long.MinValue;
-            else if (a >= 0 && na < 0)
-                a = long.MaxValue;
-            else
-                a = na;
+            a = a < 0 && na >= 0
+                ? long.MinValue
+                : a >= 0 && na < 0
+                    ? long.MaxValue
+                    : na;
         }
     }
 }

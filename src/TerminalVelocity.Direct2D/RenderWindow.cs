@@ -1,87 +1,97 @@
-using System;
-using System.Collections.Generic;
-using System.Composition;
-using System.Runtime.InteropServices;
-using SharpDX;
-using SharpDX.Direct2D1;
-using SharpDX.Mathematics.Interop;
+﻿using System;
+using System.Threading;
+using System.Threading.Tasks;
 using TerminalVelocity.Direct2D.Events;
-using TerminalVelocity.Preferences;
-using WinApi.DxUtils.Component;
+using TerminalVelocity.Eventing;
 using WinApi.User32;
 using WinApi.Windows;
 
 namespace TerminalVelocity.Direct2D
 {
-    [Shared]
-    public sealed class RenderWindow : EventedWindowCore
+    public sealed class RenderWindow : EventedWindowCore, IConstructionParamsProvider
     {
-        [Import(MouseButtonEvent.ContractName)]
-        public Event<MouseButtonEvent> MouseButton { private get; set; }
+        private sealed class RenderWindowConstructionParams : IConstructionParams
+        {
+            public WindowStyles Styles => WindowStyles.WS_OVERLAPPEDWINDOW;
 
-        [Import(RenderEvent.ContractName)]
-        public Event<RenderEvent> Render { private get; set; }
+            public WindowExStyles ExStyles => WindowExStyles.WS_EX_APPWINDOW | WindowExStyles.WS_EX_NOREDIRECTIONBITMAP;
 
-        [Import(SysCommandEvent.ContractName)]
-        public Event<SysCommandEvent> SysCommand { private get; set; }
+            public uint ControlStyles => 0;
 
-        [Import(SizeEvent.ContractName)]
-        public Event<SizeEvent> Size { private get; set; }
+            public int Width => 500;
 
-        [Import(CloseEvent.ContractName)]
-        public Event<CloseEvent> Close { private get; set; }
+            public int Height => 500;
 
-        private readonly Dx11Component _directX;
+            public int X => 10;
+
+            public int Y => 10;
+
+            public IntPtr ParentHandle => IntPtr.Zero;
+
+            public IntPtr MenuHandle => IntPtr.Zero;
+        }
+
+        private readonly MouseButtonEvent _mouseButtonEvent;
+        private readonly RenderEvent _renderEvent;
+        private readonly SysCommandEvent _sysCommandEvent;
+        private readonly ResizeEvent _resizeEvent;
+        private readonly CloseEvent _closeEvent;
+        private readonly CreatedEvent _createdEvent;
 
         public RenderWindow(
-            Dx11Component directX)
+            MouseButtonEvent mouseButtonEvent,
+            RenderEvent renderEvent,
+            SysCommandEvent sysCommandEvent,
+            ResizeEvent resizeEvent,
+            CloseEvent closeEvent,
+            CreatedEvent createdEvent)
         {
-            _directX = directX;
+            _mouseButtonEvent = mouseButtonEvent ?? throw new ArgumentNullException(nameof(mouseButtonEvent));
+            _renderEvent = renderEvent ?? throw new ArgumentNullException(nameof(renderEvent));
+            _sysCommandEvent = sysCommandEvent ?? throw new ArgumentNullException(nameof(sysCommandEvent));
+            _resizeEvent = resizeEvent ?? throw new ArgumentNullException(nameof(resizeEvent));
+            _closeEvent = closeEvent ?? throw new ArgumentNullException(nameof(closeEvent));
+            _createdEvent = createdEvent ?? throw new ArgumentNullException(nameof(createdEvent));
+
+            // if (emulateMessageEvent == null) throw new ArgumentNullException(nameof(emulateMessageEvent));
+
+            // emulateMessageEvent.Raised += OnEmulateMessage;
         }
 
-        [Import(EmulateMessageEvent.ContractName)]
-        public Event<EmulateMessageEvent> EmulateMessage 
-        {
-            set => value.Subscribe((ref EmulateMessageEvent message) =>
-            {
-                message.Result = User32Methods.SendMessage(
-                    Handle, 
-                    (uint)message.Message.Id, 
-                    message.Message.WParam, 
-                    message.Message.WParam);
-            });
-        }
+        IConstructionParams IConstructionParamsProvider.GetConstructionParams()
+            => new RenderWindowConstructionParams();
 
-        protected override void OnMessage(ref WindowMessage msg)
+        private ValueTask<EventStatus> OnEmulateMessage(EmulateMessageEventData e, CancellationToken cancellationToken)
         {
-            //Console.WriteLine(msg.Id);
-            base.OnMessage(ref msg);
+            User32Methods.SendMessage(
+                Handle,
+                (uint)e.Message.Id,
+                e.Message.WParam,
+                e.Message.WParam);
+            return new ValueTask<EventStatus>(EventStatus.Continue);
         }
 
         protected override void OnSysCommand(ref SysCommandPacket packet)
         {
-            var evt = new SysCommandEvent(packet);
-            if (!SysCommand.Publish(ref evt))
-                base.OnSysCommand(ref packet);
+            _sysCommandEvent.Publish(new SysCommandEventData(packet));
+            base.OnSysCommand(ref packet);
         }
 
         protected override void OnSize(ref SizePacket packet)
         {
-            var evt = new SizeEvent(packet);
-            if (!Size.Publish(ref evt))
-                base.OnSize(ref packet);
+            _resizeEvent.Publish(new ResizeEventData(packet));
+            base.OnSize(ref packet);
         }
-        
+
         protected override void OnClose(ref Packet packet)
         {
-            var evt = new CloseEvent();
-            if (!Close.Publish(ref evt))
-                base.OnClose(ref packet);
+            _closeEvent.Publish(new CloseEventData());
+            base.OnClose(ref packet);
         }
 
         protected override void OnCreate(ref CreateWindowPacket packet)
         {
-            _directX.Initialize(Handle, GetClientSize());
+            _createdEvent?.Publish(new CreatedEventData(Handle, GetClientSize()));
             RedrawFrame();
             SetText("Terminal Velocity");
 
@@ -90,7 +100,7 @@ namespace TerminalVelocity.Direct2D
 
         protected override void OnPaint(ref PaintPacket packet)
         {
-            Render.Publish(new RenderEvent());
+            _renderEvent.Publish(new RenderEventData());
             Validate();
         }
     }

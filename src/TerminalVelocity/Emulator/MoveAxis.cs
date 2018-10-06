@@ -1,4 +1,4 @@
-namespace TerminalVelocity.Emulator
+﻿namespace TerminalVelocity.Emulator
 {
     public enum MoveAxis : byte
     {

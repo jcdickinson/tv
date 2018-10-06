@@ -1,7 +1,4 @@
-using System;
-using System.Drawing;
-using SharpDX;
-using SharpDX.Mathematics.Interop;
+﻿using SharpDX;
 
 namespace TerminalVelocity.Direct2D
 {

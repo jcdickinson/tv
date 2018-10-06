@@ -1,16 +1,14 @@
-using System;
-using System.Composition;
+﻿using System;
 using System.Threading;
 
 namespace TerminalVelocity.Preferences
 {
-    [Shared]
     public class Configurable<TValue> : IDisposable
     {
         public event Action ValueReset;
 
         private TValue _value;
-        private Func<TValue> _factory;
+        private readonly Func<TValue> _factory;
         private int _state;
 
         public TValue Value
@@ -34,10 +32,7 @@ namespace TerminalVelocity.Preferences
 
         public bool IsDisposed => _state == -1;
 
-        public Configurable(Func<TValue> factory)
-        {
-            _factory = factory ?? throw new ArgumentNullException(nameof(factory));
-        }
+        public Configurable(Func<TValue> factory) => _factory = factory ?? throw new ArgumentNullException(nameof(factory));
 
         public Configurable(TValue constant)
         {
@@ -63,14 +58,14 @@ namespace TerminalVelocity.Preferences
         {
             if (_state != -1)
             {
-                var oldValue = _value;
+                TValue oldValue = _value;
                 _value = default;
 
                 _state = newState;
 
-                var reset = Interlocked.CompareExchange(ref ValueReset, null, null);
+                Action reset = Interlocked.CompareExchange(ref ValueReset, null, null);
                 reset?.Invoke();
-                
+
                 if (oldValue is IDisposable disposable)
                     disposable.Dispose();
             }
@@ -82,12 +77,11 @@ namespace TerminalVelocity.Preferences
                 Reset(-1);
         }
 
-        public static implicit operator TValue (Configurable<TValue> value) => value.Value;
-        
-        public static implicit operator Configurable<TValue> (TValue value) => new Configurable<TValue>(value);
+        public static implicit operator TValue(Configurable<TValue> value) => value.Value;
+
+        public static implicit operator Configurable<TValue>(TValue value) => new Configurable<TValue>(value);
     }
 
-    [Shared]
     internal class Configurable<TValue, TResult> : Configurable<TResult>
     {
         private readonly Configurable<TValue> _source;
@@ -103,11 +97,10 @@ namespace TerminalVelocity.Preferences
             if (_source.IsDisposed)
                 base.Dispose();
             else
-                base.Reset(); 
+                base.Reset();
         }
     }
 
-    [Shared]
     internal class Configurable<TFirst, TSecond, TResult> : Configurable<TResult>
     {
         private readonly Configurable<TFirst> _first;
@@ -127,7 +120,7 @@ namespace TerminalVelocity.Preferences
             if (_first.IsDisposed || _second.IsDisposed)
                 base.Dispose();
             else
-                base.Reset(); 
+                base.Reset();
         }
     }
 }

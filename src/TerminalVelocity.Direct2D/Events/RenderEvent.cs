@@ -1,11 +1,15 @@
-using SharpDX;
+﻿using TerminalVelocity.Eventing;
 
 namespace TerminalVelocity.Direct2D.Events
 {
-    public struct RenderEvent
+    [Event]
+    public sealed class RenderEvent : Event<RenderEventLoop, RenderEventData>
     {
-        public const string ContractName = "Render.Events.Direct2D.TerminalVelocity";
-        
+        public RenderEvent(RenderEventLoop eventLoop) : base(eventLoop) { }
+    }
+
+    public struct RenderEventData
+    {
         public override string ToString() => string.Empty;
     }
 }

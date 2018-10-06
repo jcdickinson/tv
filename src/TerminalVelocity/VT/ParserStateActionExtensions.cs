@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Linq.Expressions;
@@ -20,30 +20,30 @@ namespace TerminalVelocity.VT
 
             public IEnumerable<ushort> GetRange(ushort key)
             {
-                for(var i = (ushort)Min; i <= Max; i++)
+                for (var i = (ushort)Min; i <= Max; i++)
                     yield return (ushort)(key | i);
             }
 
             public static implicit operator StateChangeDescriptor(
                 (byte Min, byte Max, ParserState State, ParserAction Action) desc)
                 => new StateChangeDescriptor(desc.Min, desc.Max, new ParserStateAction(desc.State, desc.Action));
-                
+
             public static implicit operator StateChangeDescriptor(
                 (byte Single, ParserState State, ParserAction Action) desc)
                 => new StateChangeDescriptor(desc.Single, desc.Single, new ParserStateAction(desc.State, desc.Action));
-                
+
             public static implicit operator StateChangeDescriptor(
                 (byte Min, byte Max, ParserAction Action) desc)
                 => new StateChangeDescriptor(desc.Min, desc.Max, new ParserStateAction(desc.Action));
-                
+
             public static implicit operator StateChangeDescriptor(
                 (byte Single, ParserAction Action) desc)
                 => new StateChangeDescriptor(desc.Single, desc.Single, new ParserStateAction(desc.Action));
-                
+
             public static implicit operator StateChangeDescriptor(
                 (byte Min, byte Max, ParserState State) desc)
                 => new StateChangeDescriptor(desc.Min, desc.Max, new ParserStateAction(desc.State));
-                
+
             public static implicit operator StateChangeDescriptor(
                 (byte Single, ParserState State) desc)
                 => new StateChangeDescriptor(desc.Single, desc.Single, new ParserStateAction(desc.State));
@@ -93,17 +93,17 @@ namespace TerminalVelocity.VT
 
         private static Func<ushort, ParserStateAction> CreateStateChange()
         {
-            var typeofShort = typeof(ushort);
-            var typeofVTStateAction = typeof(ParserStateAction);
+            Type typeofShort = typeof(ushort);
+            Type typeofVTStateAction = typeof(ParserStateAction);
 
-            var paramKey = Expression.Parameter(typeofShort, "key");
-            var defaultResult = Expression.Default(typeofVTStateAction);
+            ParameterExpression paramKey = Expression.Parameter(typeofShort, "key");
+            DefaultExpression defaultResult = Expression.Default(typeofVTStateAction);
 
             var cases = new List<SwitchCase>();
-            
+
             #region State Change Table
 
-            cases.AddRange(CreateStateCase(ParserState.Anywhere, 
+            cases.AddRange(CreateStateCase(ParserState.Anywhere,
                 (0x18, ParserState.Ground, ParserAction.Execute),
                 (0x1a, ParserState.Ground, ParserAction.Execute),
                 (0x1b, ParserState.Escape)
@@ -122,7 +122,7 @@ namespace TerminalVelocity.VT
                 (0xF0, 0xF4, ParserState.Utf8, ParserAction.BeginUtf8)
             ));
 
-            cases.AddRange(CreateStateCase(ParserState.Escape, 
+            cases.AddRange(CreateStateCase(ParserState.Escape,
                 (0x00, 0x17, ParserAction.Execute),
                 (0x19, ParserAction.Execute),
                 (0x1C, 0x1F, ParserAction.Execute),
@@ -142,7 +142,7 @@ namespace TerminalVelocity.VT
                 (0x5F, ParserState.SosPmApcString)
             ));
 
-            cases.AddRange(CreateStateCase(ParserState.EscapeIntermediate, 
+            cases.AddRange(CreateStateCase(ParserState.EscapeIntermediate,
                 (0x00, 0x17, ParserAction.Execute),
                 (0x19, ParserAction.Execute),
                 (0x1C, 0x1F, ParserAction.Execute),
@@ -268,7 +268,7 @@ namespace TerminalVelocity.VT
 
             #endregion State Change Table
 
-            var switchCase = Expression.Switch(paramKey, defaultResult, cases.ToArray());
+            SwitchExpression switchCase = Expression.Switch(paramKey, defaultResult, cases.ToArray());
             var lambda = Expression.Lambda<Func<ushort, ParserStateAction>>(switchCase, paramKey);
             return lambda.Compile();
         }
@@ -278,8 +278,8 @@ namespace TerminalVelocity.VT
             var key = (ushort)((ushort)state << 8);
             for (var i = 0; i < descs.Length; i++)
             {
-                var desc = descs[i];
-                var testValues = desc.GetRange(key).Select(x => Expression.Constant(x));
+                StateChangeDescriptor desc = descs[i];
+                IEnumerable<ConstantExpression> testValues = desc.GetRange(key).Select(x => Expression.Constant(x));
                 yield return Expression.SwitchCase(
                     Expression.Constant(desc.Result),
                     testValues
@@ -288,7 +288,7 @@ namespace TerminalVelocity.VT
         }
 
         public static ParserStateAction GetStateChange(this ParserState state, byte next)
-            =>  StateChange((ushort)((ushort)state << 8 | next));
+            => StateChange((ushort)((ushort)state << 8 | next));
 
         public static ParserStateAction WithEntryAction(this ParserStateAction stateAction)
             => stateAction.WithAction(EntryActions[(byte)stateAction.State]);

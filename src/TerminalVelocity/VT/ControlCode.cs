@@ -1,4 +1,4 @@
-namespace TerminalVelocity.VT
+﻿namespace TerminalVelocity.VT
 {
     // https://en.wikipedia.org/wiki/C0_and_C1_control_codes
     public enum ControlCode : byte

@@ -1,19 +1,25 @@
-using System;
-using System.Text;
+﻿using System;
+using TerminalVelocity.Eventing;
 
 namespace TerminalVelocity.Emulator.Events
 {
-    public readonly struct SetClipboardEvent
+    [Event]
+    public sealed class SetClipboardEvent : Event<InteractionEventLoop, SetClipboardEventData>
     {
-        public const string ContractName = "SetClipboard.Events.Emulator.TerminalVelocity";
+        public SetClipboardEvent(InteractionEventLoop eventLoop) : base(eventLoop) { }
 
+        public SetClipboardEvent(EventSubscriber<SetClipboardEventData> handler) : base(handler) { }
+
+        public SetClipboardEvent(Action<SetClipboardEventData> handler) : base(handler) { }
+    }
+
+    public readonly struct SetClipboardEventData
+    {
         public readonly ReadOnlyMemory<char> Characters;
 
-        public SetClipboardEvent(ReadOnlyMemory<char> characters)
-        {
-            Characters = characters;
-        }
-        
+        public SetClipboardEventData(ReadOnlyMemory<char> characters)
+            => Characters = characters;
+
         public override string ToString() => new string(Characters.Span);
     }
 }

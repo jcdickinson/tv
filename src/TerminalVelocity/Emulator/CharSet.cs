@@ -1,6 +1,5 @@
-using System;
+﻿using System;
 using System.Runtime.InteropServices;
-using System.Text;
 
 namespace TerminalVelocity.Emulator
 {
@@ -15,27 +14,22 @@ namespace TerminalVelocity.Emulator
         {
             get
             {
-                var bytes = MemoryMarshal.Cast<CharSet, char>(MemoryMarshal.CreateSpan(ref this, 1));
+                Span<char> bytes = MemoryMarshal.Cast<CharSet, char>(MemoryMarshal.CreateSpan(ref this, 1));
                 return bytes[index];
             }
             set
             {
-                var bytes = MemoryMarshal.Cast<CharSet, char>(MemoryMarshal.CreateSpan(ref this, 1));
+                Span<char> bytes = MemoryMarshal.Cast<CharSet, char>(MemoryMarshal.CreateSpan(ref this, 1));
                 bytes[index] = value;
             }
         }
-        
+
         public char this[char index]
         {
-            get
-            {
-                var i = (uint)index;
-                if (i > 255) return index;
-                return this[(byte)index];
-            }
+            get => index > 255 ? index : this[(byte)index];
             set
             {
-                var i = (uint)index;
+                uint i = index;
                 if (i > 255) throw new ArgumentOutOfRangeException(nameof(index));
                 this[(byte)index] = value;
             }
@@ -51,7 +45,7 @@ namespace TerminalVelocity.Emulator
 
         private static CharSet CreateSpecialCharacterAndLineDrawing()
         {
-            var result = Ascii;
+            CharSet result = Ascii;
             result['`'] = '◆';
             result['a'] = '▒';
             result['b'] = '\t';

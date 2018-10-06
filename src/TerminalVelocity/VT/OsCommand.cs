@@ -1,4 +1,4 @@
-namespace TerminalVelocity.VT
+﻿namespace TerminalVelocity.VT
 {
     public enum OsCommand : short
     {

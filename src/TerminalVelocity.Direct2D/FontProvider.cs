@@ -1,31 +1,22 @@
-using System;
-using System.Composition;
-using System.Drawing;
-using SharpDX;
+﻿using System.Drawing;
 using SharpDX.DirectWrite;
 using TerminalVelocity.Preferences;
 
 namespace TerminalVelocity.Direct2D
 {
-    [Shared]
     public class FontProvider
     {
-        public const string TerminalTextContract = TerminalTheme.FontContract;
-
-        [Export(TerminalTextContract)]
         public Configurable<TextFormat> TerminalText { get; }
 
-        private Factory _factory;
+        private readonly Factory _factory;
 
-        [ImportingConstructor]
         public FontProvider(
-            [Import] Factory factory,
-            [Import(TerminalTheme.FontContract)] Configurable<string> terminalTextFamily,
-            [Import(TerminalTheme.FontContract)] Configurable<int> terminalTextSize
+            Factory factory,
+            TerminalConfiguration terminalConfiguration
         )
         {
             _factory = factory;
-            TerminalText = terminalTextFamily.Join(terminalTextSize, TextFormat);
+            TerminalText = terminalConfiguration.Font.Join(terminalConfiguration.FontSize, TextFormat);
         }
 
         private TextFormat TextFormat(string font, Size fontSize) => TextFormat(font, fontSize.Height);

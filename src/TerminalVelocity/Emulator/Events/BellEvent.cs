@@ -1,9 +1,20 @@
+﻿using System;
+using TerminalVelocity.Eventing;
+
 namespace TerminalVelocity.Emulator.Events
 {
-    public readonly struct BellEvent
+    [Event]
+    public sealed class BellEvent : Event<InteractionEventLoop, BellEventData>
     {
-        public const string ContractName = "Bell.Events.Emulator.TerminalVelocity";
-        
+        public BellEvent(InteractionEventLoop eventLoop) : base(eventLoop) { }
+
+        public BellEvent(EventSubscriber<BellEventData> handler) : base(handler) { }
+
+        public BellEvent(Action<BellEventData> handler) : base(handler) { }
+    }
+
+    public readonly struct BellEventData
+    {
         public override string ToString() => string.Empty;
     }
 }

@@ -1,28 +1,33 @@
-using System;
+﻿using System;
 using System.Text;
+using TerminalVelocity.Eventing;
 
 namespace TerminalVelocity.VT.Events
 {
-    public readonly struct EscapeSequenceEvent
+    [Event]
+    public sealed class EscapeSequenceEvent : Event<InteractionEventLoop, EscapeSequenceEventData>
     {
-        public const string ContractName = "ESC.Events.VT.TerminalVelocity";
+        public EscapeSequenceEvent(InteractionEventLoop eventLoop) : base(eventLoop) { }
 
+        public EscapeSequenceEvent(EventSubscriber<EscapeSequenceEventData> handler) : base(handler) { }
+
+        public EscapeSequenceEvent(Action<EscapeSequenceEventData> handler) : base(handler) { }
+    }
+
+    public readonly struct EscapeSequenceEventData
+    {
         public readonly EscapeCommand Command;
 
         public readonly ReadOnlyMemory<byte> Intermediates;
 
         public readonly IgnoredData Ignored;
 
-        public EscapeSequenceEvent(
+        public EscapeSequenceEventData(
             EscapeCommand command,
             ReadOnlyMemory<byte> intermediates,
             IgnoredData ignored)
-        {
-            Command = command;
-            Intermediates = intermediates;
-            Ignored = ignored;
-        }
-        
+            => (Command, Intermediates, Ignored) = (command, intermediates, ignored);
+
         public override string ToString()
         {
             var sb = new StringBuilder();
@@ -33,7 +38,7 @@ namespace TerminalVelocity.VT.Events
             sb.Append(Encoding.ASCII.GetString(Intermediates.Span));
             if (Ignored.HasFlag(IgnoredData.Intermediates))
                 sb.Append("...");
-            
+
             sb.Append("]");
 
             return sb.ToString();

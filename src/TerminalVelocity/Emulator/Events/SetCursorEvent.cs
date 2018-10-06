@@ -1,19 +1,25 @@
-using System;
-using System.Drawing;
+﻿using System;
+using TerminalVelocity.Eventing;
 
 namespace TerminalVelocity.Emulator.Events
 {
-    public readonly struct SetCursorEvent
+    [Event]
+    public sealed class SetCursorEvent : Event<InteractionEventLoop, SetCursorEventData>
     {
-        public const string ContractName = "SetCursor.Events.Emulator.TerminalVelocity";
+        public SetCursorEvent(InteractionEventLoop eventLoop) : base(eventLoop) { }
 
+        public SetCursorEvent(EventSubscriber<SetCursorEventData> handler) : base(handler) { }
+
+        public SetCursorEvent(Action<SetCursorEventData> handler) : base(handler) { }
+    }
+
+    public readonly struct SetCursorEventData
+    {
         public readonly CursorStyle Style;
 
-        public SetCursorEvent(CursorStyle style)
-        {
-            Style = style;
-        }
-        
+        public SetCursorEventData(CursorStyle style)
+            => Style = style;
+
         public override string ToString() => FormattableString.Invariant($"{Style}");
     }
 }

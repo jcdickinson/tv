@@ -1,21 +1,26 @@
-using System;
+﻿using System;
 using SharpDX;
+using TerminalVelocity.Eventing;
 using WinApi.User32;
 using WinApi.Windows;
 
 namespace TerminalVelocity.Direct2D.Events
 {
-    public struct MouseButtonEvent
+    [Event]
+    public sealed class MouseButtonEvent : Event<InteractionEventLoop, MouseButtonEventData>
     {
-        public const string ContractName = "MouseButton.Events.Direct2D.TerminalVelocity";
+        public MouseButtonEvent(InteractionEventLoop eventLoop) : base(eventLoop) { }
+    }
 
+    public struct MouseButtonEventData
+    {
         public readonly Point Point;
         public readonly MouseButton Button;
         public readonly bool IsButtonDown;
         public readonly MouseInputKeyStateFlags InputState;
         public readonly MouseButtonResult Result;
 
-        public MouseButtonEvent(in MouseButtonPacket packet)
+        public MouseButtonEventData(in MouseButtonPacket packet)
         {
             Point = new Point(packet.Point.X, packet.Point.Y);
             Button = packet.Button;

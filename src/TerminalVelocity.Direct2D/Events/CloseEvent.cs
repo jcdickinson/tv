@@ -1,15 +1,15 @@
-using System;
-using NetCoreEx.Geometry;
-using WinApi.User32;
-using WinApi.Windows;
+﻿using TerminalVelocity.Eventing;
 
 namespace TerminalVelocity.Direct2D.Events
 {
-    public struct CloseEvent
+    [Event]
+    public sealed class CloseEvent : Event<InteractionEventLoop, CloseEventData>
     {
-        public const string ContractName = "Close.Events.Direct2D.TerminalVelocity";
-        
+        public CloseEvent(InteractionEventLoop eventLoop) : base(eventLoop) { }
+    }
 
+    public struct CloseEventData
+    {
         public override string ToString() => string.Empty;
     }
 }

@@ -1,10 +1,11 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Drawing;
 using System.Globalization;
 using System.Linq;
 using System.Text;
 using TerminalVelocity.Emulator.Events;
+using TerminalVelocity.Eventing;
 using TerminalVelocity.VT;
 using Xunit;
 
@@ -12,252 +13,243 @@ namespace TerminalVelocity.Emulator
 {
     public static class TerminalEmulatorTests
     {
+        private static void DefaultHandler<T>(T e) where T : struct { }
+
         [Fact]
         public static void TerminalEmulator_Print_ConfigureCharSet_ShiftIn_ShiftOut()
         {
             const string Case = "Hello 😁 world a ";
             const string SpecialCase = "H\n┌┌⎺ 😁 ┬⎺⎼┌\r ▒ ";
 
-            var sut = new TerminalEmulator();
-            var onPrint = new Event<VT.Events.PrintEvent>("VT.Print");
-            var onEsc = new Event<VT.Events.EscapeSequenceEvent>("VT.Escape");
-            var onExec = new Event<VT.Events.ExecuteEvent>("VT.Execute");
-            sut.OnPrint = onPrint;
-            sut.OnEscapeSequence = onEsc;
-            sut.OnExecute = onExec;
+            var onPrint = new VT.Events.PrintEvent(DefaultHandler);
+            var onEsc = new VT.Events.EscapeSequenceEvent(DefaultHandler);
+            var onExec = new VT.Events.ExecuteEvent(DefaultHandler);
 
             var sb = new StringBuilder();
             var ix = 0;
             var current = Case;
-            sut.Print = new Event<Events.PrintEvent>("Print", print =>
-            {
-                sb.Append(new string(print.Characters.Span));
-                Assert.Equal(current.Substring(ix, print.Characters.Length), print.ToString());
-                ix = (ix + print.Characters.Length) % Case.Length;
-            });
+            var sut = new TerminalEmulator(
+                onPrintEvent: onPrint, onEscapeSequenceEvent: onEsc, onExecuteEvent: onExec,
+                printEvent: new PrintEvent(print =>
+                {
+                    sb.Append(new string(print.Characters.Span));
+                    Assert.Equal(current.Substring(ix, print.Characters.Length), print.ToString());
+                    ix = (ix + print.Characters.Length) % Case.Length;
+                }));
 
-            onPrint.Publish(new VT.Events.PrintEvent(Case.AsMemory()));
-            onPrint.Publish(new VT.Events.PrintEvent(Case.AsMemory()));
+            onPrint.Publish(new VT.Events.PrintEventData(Case.AsMemory()));
+            onPrint.Publish(new VT.Events.PrintEventData(Case.AsMemory()));
             Assert.Equal(current + current, sb.ToString());
 
             // SET G0
 
-            onEsc.Publish(new VT.Events.EscapeSequenceEvent(EscapeCommand.ConfigureSpecialCharSet, new byte[] { (byte)'(' }, VT.IgnoredData.None));
+            onEsc.Publish(new VT.Events.EscapeSequenceEventData(EscapeCommand.ConfigureSpecialCharSet, new byte[] { (byte)'(' }, VT.IgnoredData.None));
             sb.Clear();
             ix = 0;
             current = SpecialCase;
 
-            onPrint.Publish(new VT.Events.PrintEvent(Case.AsMemory()));
-            onPrint.Publish(new VT.Events.PrintEvent(Case.AsMemory()));
+            onPrint.Publish(new VT.Events.PrintEventData(Case.AsMemory()));
+            onPrint.Publish(new VT.Events.PrintEventData(Case.AsMemory()));
             Assert.Equal(current + current, sb.ToString());
 
             // Shift
 
-            onExec.Publish(new VT.Events.ExecuteEvent(VT.ControlCode.ShiftOut));
+            onExec.Publish(new VT.Events.ExecuteEventData(VT.ControlCode.ShiftOut));
             sb.Clear();
             ix = 0;
             current = Case;
-            
-            onPrint.Publish(new VT.Events.PrintEvent(Case.AsMemory()));
-            onPrint.Publish(new VT.Events.PrintEvent(Case.AsMemory()));
+
+            onPrint.Publish(new VT.Events.PrintEventData(Case.AsMemory()));
+            onPrint.Publish(new VT.Events.PrintEventData(Case.AsMemory()));
             Assert.Equal(current + current, sb.ToString());
 
             // Reset G0 and Shift
-            onEsc.Publish(new VT.Events.EscapeSequenceEvent(EscapeCommand.ConfigureAsciiCharSet, new byte[] { (byte)'(' }, VT.IgnoredData.None));
-            onExec.Publish(new VT.Events.ExecuteEvent(VT.ControlCode.ShiftIn));
+            onEsc.Publish(new VT.Events.EscapeSequenceEventData(EscapeCommand.ConfigureAsciiCharSet, new byte[] { (byte)'(' }, VT.IgnoredData.None));
+            onExec.Publish(new VT.Events.ExecuteEventData(VT.ControlCode.ShiftIn));
             sb.Clear();
             ix = 0;
             current = Case;
-            
-            onPrint.Publish(new VT.Events.PrintEvent(Case.AsMemory()));
-            onPrint.Publish(new VT.Events.PrintEvent(Case.AsMemory()));
+
+            onPrint.Publish(new VT.Events.PrintEventData(Case.AsMemory()));
+            onPrint.Publish(new VT.Events.PrintEventData(Case.AsMemory()));
             Assert.Equal(current + current, sb.ToString());
         }
-        
+
         [Fact]
         public static void TerminalEmulator_Execute_HorizontalTabulation()
         {
-            var sut = new TerminalEmulator();
-            var onExecute = new Event<VT.Events.ExecuteEvent>("Execute");
-            sut.OnExecute = onExecute;
+            var onExecute = new VT.Events.ExecuteEvent(DefaultHandler);
 
             var dispatched = 0;
-            sut.Whitespace = new Event<WhitespaceEvent>("Whitespace", ws =>
-            {
-                ++dispatched;
-                Assert.Equal("\t".ToCharArray(), ws.Characters.ToArray());
-                Assert.Equal(1, ws.Count);
-                Assert.Equal("\t*1", ws.ToString());
-            });
+            var sut = new TerminalEmulator(onExecuteEvent: onExecute,
+                whitespaceEvent: new WhitespaceEvent(ws =>
+                {
+                    ++dispatched;
+                    Assert.Equal("\t".ToCharArray(), ws.Characters.ToArray());
+                    Assert.Equal(1, ws.Count);
+                    Assert.Equal("\t*1", ws.ToString());
+                }));
 
-            onExecute.Publish(new VT.Events.ExecuteEvent(ControlCode.HorizontalTabulation));
+            onExecute.Publish(new VT.Events.ExecuteEventData(ControlCode.HorizontalTabulation));
             Assert.Equal(1, dispatched);
         }
-        
+
         [Fact]
         public static void TerminalEmulator_Execute_CarriageReturn()
         {
-            var sut = new TerminalEmulator();
-            var onExecute = new Event<VT.Events.ExecuteEvent>("Execute");
-            sut.OnExecute = onExecute;
+            var onExecute = new VT.Events.ExecuteEvent(DefaultHandler);
 
             var dispatched = 0;
-            sut.Whitespace = new Event<WhitespaceEvent>("Whitespace", ws =>
-            {
-                ++dispatched;
-                Assert.Equal("\r".ToCharArray(), ws.Characters.ToArray());
-                Assert.Equal(1, ws.Count);
-                Assert.Equal("\r*1", ws.ToString());
-            });
+            var sut = new TerminalEmulator(onExecuteEvent: onExecute,
+                whitespaceEvent: new WhitespaceEvent(ws =>
+                {
+                    ++dispatched;
+                    Assert.Equal("\r".ToCharArray(), ws.Characters.ToArray());
+                    Assert.Equal(1, ws.Count);
+                    Assert.Equal("\r*1", ws.ToString());
+                }));
 
-            onExecute.Publish(new VT.Events.ExecuteEvent(ControlCode.CarriageReturn));
+            onExecute.Publish(new VT.Events.ExecuteEventData(ControlCode.CarriageReturn));
             Assert.Equal(1, dispatched);
         }
-        
+
         [Fact]
         public static void TerminalEmulator_Execute_FormFeed()
         {
-            var sut = new TerminalEmulator();
-            var onExecute = new Event<VT.Events.ExecuteEvent>("Execute");
-            sut.OnExecute = onExecute;
+            var onExecute = new VT.Events.ExecuteEvent(DefaultHandler);
 
             var dispatched = 0;
-            sut.Whitespace = new Event<WhitespaceEvent>("Whitespace", ws =>
-            {
-                ++dispatched;
-                Assert.Equal("\n".ToCharArray(), ws.Characters.ToArray());
-                Assert.Equal(1, ws.Count);
-                Assert.Equal("\n*1", ws.ToString());
-            });
+            var sut = new TerminalEmulator(onExecuteEvent: onExecute,
+                whitespaceEvent: new WhitespaceEvent(ws =>
+                {
+                    ++dispatched;
+                    Assert.Equal("\n".ToCharArray(), ws.Characters.ToArray());
+                    Assert.Equal(1, ws.Count);
+                    Assert.Equal("\n*1", ws.ToString());
+                }));
 
-            onExecute.Publish(new VT.Events.ExecuteEvent(ControlCode.FormFeed));
-            onExecute.Publish(new VT.Events.ExecuteEvent(ControlCode.VerticalTabulation));
-            onExecute.Publish(new VT.Events.ExecuteEvent(ControlCode.LineFeed));
+            onExecute.Publish(new VT.Events.ExecuteEventData(ControlCode.FormFeed));
+            onExecute.Publish(new VT.Events.ExecuteEventData(ControlCode.VerticalTabulation));
+            onExecute.Publish(new VT.Events.ExecuteEventData(ControlCode.LineFeed));
             Assert.Equal(3, dispatched);
         }
-        
+
         [Fact]
         public static void TerminalEmulator_Execute_NextLine()
         {
-            var sut = new TerminalEmulator();
-            var onExecute = new Event<VT.Events.ExecuteEvent>("Execute");
-            sut.OnExecute = onExecute;
+            var onExecute = new VT.Events.ExecuteEvent(DefaultHandler);
 
             var dispatched = 0;
-            sut.Whitespace = new Event<WhitespaceEvent>("Whitespace", ws =>
-            {
-                ++dispatched;
-                Assert.Equal("\r\n".ToCharArray(), ws.Characters.ToArray());
-                Assert.Equal(1, ws.Count);
-                Assert.Equal("\r\n*1", ws.ToString());
-            });
+            var sut = new TerminalEmulator(onExecuteEvent: onExecute,
+                whitespaceEvent: new WhitespaceEvent(ws =>
+                {
+                    ++dispatched;
+                    Assert.Equal("\r\n".ToCharArray(), ws.Characters.ToArray());
+                    Assert.Equal(1, ws.Count);
+                    Assert.Equal("\r\n*1", ws.ToString());
+                }));
 
-            onExecute.Publish(new VT.Events.ExecuteEvent(ControlCode.NextLine));
+            onExecute.Publish(new VT.Events.ExecuteEventData(ControlCode.NextLine));
             Assert.Equal(1, dispatched);
         }
-        
+
         [Fact]
         public static void TerminalEmulator_Execute_Backspace()
         {
-            var sut = new TerminalEmulator();
-            var onExecute = new Event<VT.Events.ExecuteEvent>("Execute");
-            sut.OnExecute = onExecute;
+            var onExecute = new VT.Events.ExecuteEvent(DefaultHandler);
 
             var dispatched = 0;
-            sut.Delete = new Event<DeleteEvent>("Delete", delete =>
-            {
-                ++dispatched;
-                Assert.Equal(DeleteDirection.Backwards, delete.Direction);
-                Assert.Equal("Backwards", delete.ToString());
-            });
+            var sut = new TerminalEmulator(onExecuteEvent: onExecute,
+                deleteEvent: new DeleteEvent(delete =>
+                {
+                    ++dispatched;
+                    Assert.Equal(DeleteDirection.Backwards, delete.Direction);
+                    Assert.Equal("Backwards", delete.ToString());
+                }));
 
-            onExecute.Publish(new VT.Events.ExecuteEvent(ControlCode.Backspace));
+            onExecute.Publish(new VT.Events.ExecuteEventData(ControlCode.Backspace));
             Assert.Equal(1, dispatched);
         }
-        
+
         [Fact]
         public static void TerminalEmulator_Execute_Bell()
         {
-            var sut = new TerminalEmulator();
-            var onExecute = new Event<VT.Events.ExecuteEvent>("Execute");
-            sut.OnExecute = onExecute;
+            var onExecute = new VT.Events.ExecuteEvent(DefaultHandler);
 
             var dispatched = 0;
-            sut.Bell = new Event<BellEvent>("Bell", bell =>
-            {
-                ++dispatched;
-                Assert.Equal(string.Empty, bell.ToString());
-            });
+            var sut = new TerminalEmulator(onExecuteEvent: onExecute,
+                bellEvent: new BellEvent(bell =>
+                {
+                    ++dispatched;
+                    Assert.Equal(string.Empty, bell.ToString());
+                }));
 
-            onExecute.Publish(new VT.Events.ExecuteEvent(ControlCode.Bell));
+            onExecute.Publish(new VT.Events.ExecuteEventData(ControlCode.Bell));
             Assert.Equal(1, dispatched);
         }
-        
+
         [Fact]
         public static void TerminalEmulator_Execute_HorizontalTabulationSet()
         {
-            var sut = new TerminalEmulator();
-            var onExecute = new Event<VT.Events.ExecuteEvent>("Execute");
-            sut.OnExecute = onExecute;
+            var onExecute = new VT.Events.ExecuteEvent(DefaultHandler);
 
             var dispatched = 0;
-            sut.SetTabstop = new Event<SetTabstopEvent>("SetTabstop", sts =>
-            {
-                ++dispatched;
-                Assert.Equal(string.Empty, sts.ToString());
-            });
+            var sut = new TerminalEmulator(onExecuteEvent: onExecute,
+                setTabstopEvent: new SetTabstopEvent(sts =>
+                {
+                    ++dispatched;
+                    Assert.Equal(string.Empty, sts.ToString());
+                }));
 
-            onExecute.Publish(new VT.Events.ExecuteEvent(ControlCode.HorizontalTabulationSet));
+            onExecute.Publish(new VT.Events.ExecuteEventData(ControlCode.HorizontalTabulationSet));
             Assert.Equal(1, dispatched);
         }
-        
+
         [Fact]
         public static void TerminalEmulator_Execute_SingleCharacterIntroducer()
         {
-            var sut = new TerminalEmulator();
-            var onExecute = new Event<VT.Events.ExecuteEvent>("Execute");
-            sut.OnExecute = onExecute;
+            var onExecute = new VT.Events.ExecuteEvent(DefaultHandler);
 
             var dispatched = 0;
-            sut.IdentifyTerminal = new Event<IdentifyTerminalEvent>("IdentifyTerminal", id =>
-            {
-                ++dispatched;
-                Assert.Equal(string.Empty, id.ToString());
-            });
+            var sut = new TerminalEmulator(onExecuteEvent: onExecute,
+                identifyTerminalEvent: new IdentifyTerminalEvent(id =>
+                {
+                    ++dispatched;
+                    Assert.Equal(string.Empty, id.ToString());
+                }));
 
-            onExecute.Publish(new VT.Events.ExecuteEvent(ControlCode.SingleCharacterIntroducer));
+            onExecute.Publish(new VT.Events.ExecuteEventData(ControlCode.SingleCharacterIntroducer));
             Assert.Equal(1, dispatched);
         }
 
-        private static VT.Events.OsCommandEvent Osc(OsCommand command, params string[] args)
+        private static VT.Events.OsCommandEventData Osc(OsCommand command, params string[] args)
         {
             var arr = new ReadOnlyMemory<byte>[args.Length + 1];
             arr[0] = Encoding.ASCII.GetBytes(((int)command).ToString(CultureInfo.InvariantCulture));
             for (var i = 0; i < args.Length; i++)
                 arr[i + 1] = Encoding.UTF8.GetBytes(args[i]);
-            return new VT.Events.OsCommandEvent(arr, IgnoredData.None);
+            return new VT.Events.OsCommandEventData(arr, IgnoredData.None);
         }
-        
+
         [Fact]
         public static void TerminalEmulator_OsCommand_SetWindowTitle()
         {
-            var sut = new TerminalEmulator();
-            var onOsCommand = new Event<VT.Events.OsCommandEvent>("OsCommand");
-            sut.OnOsCommand = onOsCommand;
+            var onOsCommand = new VT.Events.OsCommandEvent(DefaultHandler);
 
             var dispatched = 0;
-            sut.SetWindowTitle = new Event<SetWindowTitleEvent>("SetWindowTitle", title =>
-            {
-                ++dispatched;
-                Assert.Equal("Hello 😁 world".ToCharArray(), title.Characters.ToArray());
-                Assert.Equal("Hello 😁 world", title.ToString());
-            });
+            var sut = new TerminalEmulator(onOsCommandEvent: onOsCommand,
+                setWindowTitleEvent: new SetWindowTitleEvent(title =>
+                {
+                    ++dispatched;
+                    Assert.Equal("Hello 😁 world".ToCharArray(), title.Characters.ToArray());
+                    Assert.Equal("Hello 😁 world", title.ToString());
+                }));
 
             onOsCommand.Publish(Osc(OsCommand.SetWindowTitle, "Hello 😁 world"));
             onOsCommand.Publish(Osc(OsCommand.SetWindowIconAndTitle, "Hello 😁 world"));
             Assert.Equal(2, dispatched);
         }
-        
+
         [Theory]
         [InlineData(2, NamedColor.Black, 0, 0, 0, "Black=(0,0,0)", OsCommand.SetColor, "0", "#000000")]
         [InlineData(2, NamedColor.Red, 255, 0, 0, "Red=(255,0,0)", OsCommand.SetColor, "1", "#FF0000")]
@@ -290,18 +282,17 @@ namespace TerminalVelocity.Emulator
             OsCommand command, params string[] param
         )
         {
-            var sut = new TerminalEmulator();
-            var onOsCommand = new Event<VT.Events.OsCommandEvent>("OsCommand");
-            sut.OnOsCommand = onOsCommand;
+            var onOsCommand = new VT.Events.OsCommandEvent(DefaultHandler);
 
             var dispatched = 0;
-            sut.SetColor = new Event<SetColorEvent>("SetColor", color =>
-            {
-                Assert.Equal(expectedIndex, color.Index);
-                Assert.Equal(Color.FromArgb(expectedR, expectedG, expectedB), color.Color);
-                Assert.Equal(expectedMessage, color.ToString());
-                dispatched++;
-            });
+            var sut = new TerminalEmulator(onOsCommandEvent: onOsCommand,
+                setColorEvent: new SetColorEvent(color =>
+                {
+                    Assert.Equal(expectedIndex, color.Index);
+                    Assert.Equal(Color.FromArgb(expectedR, expectedG, expectedB), color.Color);
+                    Assert.Equal(expectedMessage, color.ToString());
+                    dispatched++;
+                }));
 
             param = param.Concat(param).ToArray();
             onOsCommand.Publish(Osc(command, param));
@@ -311,17 +302,16 @@ namespace TerminalVelocity.Emulator
         [Fact]
         internal static void TerminalEmulator_OsCommand_ResetColor_All()
         {
-            var sut = new TerminalEmulator();
-            var onOsCommand = new Event<VT.Events.OsCommandEvent>("OsCommand");
-            sut.OnOsCommand = onOsCommand;
-
             var expected = new HashSet<NamedColor>(Enumerable.Range(0, 257).Select(x => (NamedColor)x));
-            sut.ResetColor = new Event<ResetColorEvent>("ResetColor", color =>
-            {
-                Assert.Contains(color.Index, expected);
-                expected.Remove(color.Index);
-                Assert.Equal(color.Index.ToString(), color.ToString());
-            });
+
+            var onOsCommand = new VT.Events.OsCommandEvent(DefaultHandler);
+            var sut = new TerminalEmulator(onOsCommandEvent: onOsCommand,
+                resetColorEvent: new ResetColorEvent(color =>
+                {
+                    Assert.Contains(color.Index, expected);
+                    expected.Remove(color.Index);
+                    Assert.Equal(color.Index.ToString(), color.ToString());
+                }));
 
             onOsCommand.Publish(Osc(OsCommand.ResetColor));
             Assert.Empty(expected);
@@ -330,21 +320,20 @@ namespace TerminalVelocity.Emulator
         [Fact]
         internal static void TerminalEmulator_OsCommand_ResetColor_Values()
         {
-            var sut = new TerminalEmulator();
-            var onOsCommand = new Event<VT.Events.OsCommandEvent>("OsCommand");
-            sut.OnOsCommand = onOsCommand;
-
             var expected = new HashSet<NamedColor>
             {
                 NamedColor.Black, NamedColor.Red, NamedColor.Green,
                 NamedColor.Yellow, NamedColor.Blue
             };
-            sut.ResetColor = new Event<ResetColorEvent>("ResetColor", color =>
-            {
-                Assert.Contains(color.Index, expected);
-                expected.Remove(color.Index);
-                Assert.Equal(color.Index.ToString(), color.ToString());
-            });
+
+            var onOsCommand = new VT.Events.OsCommandEvent(DefaultHandler);
+            var sut = new TerminalEmulator(onOsCommandEvent: onOsCommand,
+                resetColorEvent: new ResetColorEvent(color =>
+                {
+                    Assert.Contains(color.Index, expected);
+                    expected.Remove(color.Index);
+                    Assert.Equal(color.Index.ToString(), color.ToString());
+                }));
 
             onOsCommand.Publish(Osc(OsCommand.ResetColor, "0", "1", "2", "3", "4"));
             Assert.Empty(expected);
@@ -353,17 +342,16 @@ namespace TerminalVelocity.Emulator
         [Fact]
         internal static void TerminalEmulator_OsCommand_ResetForegroundColor()
         {
-            var sut = new TerminalEmulator();
-            var onOsCommand = new Event<VT.Events.OsCommandEvent>("OsCommand");
-            sut.OnOsCommand = onOsCommand;
+            var onOsCommand = new VT.Events.OsCommandEvent(DefaultHandler);
 
             var dispatched = 0;
-            sut.ResetColor = new Event<ResetColorEvent>("ResetColor", color =>
-            {
-                Assert.Equal(NamedColor.Foreground, color.Index);
-                Assert.Equal("Foreground", color.ToString());
-                dispatched++;
-            });
+            var sut = new TerminalEmulator(onOsCommandEvent: onOsCommand,
+                resetColorEvent: new ResetColorEvent(color =>
+                {
+                    Assert.Equal(NamedColor.Foreground, color.Index);
+                    Assert.Equal("Foreground", color.ToString());
+                    dispatched++;
+                }));
 
             onOsCommand.Publish(Osc(OsCommand.ResetForegroundColor));
             Assert.Equal(1, dispatched);
@@ -372,17 +360,16 @@ namespace TerminalVelocity.Emulator
         [Fact]
         internal static void TerminalEmulator_OsCommand_ResetBackgroundColor()
         {
-            var sut = new TerminalEmulator();
-            var onOsCommand = new Event<VT.Events.OsCommandEvent>("OsCommand");
-            sut.OnOsCommand = onOsCommand;
+            var onOsCommand = new VT.Events.OsCommandEvent(DefaultHandler);
 
             var dispatched = 0;
-            sut.ResetColor = new Event<ResetColorEvent>("ResetColor", color =>
-            {
-                Assert.Equal(NamedColor.Background, color.Index);
-                Assert.Equal("Background", color.ToString());
-                dispatched++;
-            });
+            var sut = new TerminalEmulator(onOsCommandEvent: onOsCommand,
+                resetColorEvent: new ResetColorEvent(color =>
+                {
+                    Assert.Equal(NamedColor.Background, color.Index);
+                    Assert.Equal("Background", color.ToString());
+                    dispatched++;
+                }));
 
             onOsCommand.Publish(Osc(OsCommand.ResetBackgroundColor));
             Assert.Equal(1, dispatched);
@@ -391,22 +378,21 @@ namespace TerminalVelocity.Emulator
         [Fact]
         internal static void TerminalEmulator_OsCommand_ResetCursorColor()
         {
-            var sut = new TerminalEmulator();
-            var onOsCommand = new Event<VT.Events.OsCommandEvent>("OsCommand");
-            sut.OnOsCommand = onOsCommand;
+            var onOsCommand = new VT.Events.OsCommandEvent(DefaultHandler);
 
             var dispatched = 0;
-            sut.ResetColor = new Event<ResetColorEvent>("ResetColor", color =>
-            {
-                Assert.Equal(NamedColor.Cursor, color.Index);
-                Assert.Equal("Cursor", color.ToString());
-                dispatched++;
-            });
+            var sut = new TerminalEmulator(onOsCommandEvent: onOsCommand,
+                resetColorEvent: new ResetColorEvent(color =>
+                {
+                    Assert.Equal(NamedColor.Cursor, color.Index);
+                    Assert.Equal("Cursor", color.ToString());
+                    dispatched++;
+                }));
 
             onOsCommand.Publish(Osc(OsCommand.ResetCursorColor));
             Assert.Equal(1, dispatched);
         }
-        
+
         [Theory]
         [InlineData(CursorStyle.Block, "Block", "CursorShape=0")]
         [InlineData(CursorStyle.Beam, "Beam", "CursorShape=1")]
@@ -415,234 +401,217 @@ namespace TerminalVelocity.Emulator
             CursorStyle expectedStyle, string expectedMessage, params string[] param
         )
         {
-            var sut = new TerminalEmulator();
-            var onOsCommand = new Event<VT.Events.OsCommandEvent>("OsCommand");
-            sut.OnOsCommand = onOsCommand;
+            var onOsCommand = new VT.Events.OsCommandEvent(DefaultHandler);
 
             var dispatched = 0;
-            sut.SetCursor = new Event<SetCursorEvent>("SetCursor", cursor =>
-            {
-                Assert.Equal(expectedStyle, cursor.Style);
-                Assert.Equal(expectedMessage, cursor.ToString());
-                dispatched++;
-            });
+            var sut = new TerminalEmulator(onOsCommandEvent: onOsCommand,
+                setCursorEvent: new SetCursorEvent(cursor =>
+                {
+                    Assert.Equal(expectedStyle, cursor.Style);
+                    Assert.Equal(expectedMessage, cursor.ToString());
+                    dispatched++;
+                }));
 
             onOsCommand.Publish(Osc(OsCommand.SetCursorStyle, param));
             Assert.Equal(1, dispatched);
         }
-        
+
         [Fact]
         internal static void TerminalEmulator_OsCommand_SetClipboard()
         {
             const string Case = "Hello 😁 world";
 
-            var sut = new TerminalEmulator();
-            var onOsCommand = new Event<VT.Events.OsCommandEvent>("OsCommand");
-            sut.OnOsCommand = onOsCommand;
+            var onOsCommand = new VT.Events.OsCommandEvent(DefaultHandler);
 
             var dispatched = 0;
-            sut.SetClipboard = new Event<SetClipboardEvent>("SetClipboard", clipboard =>
-            {
-                Assert.Equal(Case.ToCharArray(), clipboard.Characters.ToArray());
-                Assert.Equal("Hello 😁 world", clipboard.ToString());
-                dispatched++;
-            });
+            var sut = new TerminalEmulator(onOsCommandEvent: onOsCommand,
+                setClipboardEvent: new SetClipboardEvent(clipboard =>
+                {
+                    Assert.Equal(Case.ToCharArray(), clipboard.Characters.ToArray());
+                    Assert.Equal("Hello 😁 world", clipboard.ToString());
+                    dispatched++;
+                }));
 
             var param = Convert.ToBase64String(Encoding.UTF8.GetBytes(Case));
             onOsCommand.Publish(Osc(OsCommand.SetClipboard, "", param));
             Assert.Equal(1, dispatched);
         }
-        
+
         [Fact]
         internal static void TerminalEmulator_EscapeSequence_LineFeed()
         {
-            var sut = new TerminalEmulator();
-            var onEscapeSequence = new Event<VT.Events.EscapeSequenceEvent>("EscapeSequence");
-            sut.OnEscapeSequence = onEscapeSequence;
+            var onEscapeSequence = new VT.Events.EscapeSequenceEvent(DefaultHandler);
 
             var dispatched = 0;
-            sut.Whitespace = new Event<WhitespaceEvent>("Whitespace", ws =>
-            {
-                Assert.Equal("\n".ToCharArray(), ws.Characters.ToArray());
-                Assert.Equal(1, ws.Count);
-                Assert.Equal("\n*1", ws.ToString());
-                dispatched++;
-            });
+            var sut = new TerminalEmulator(onEscapeSequenceEvent: onEscapeSequence,
+                whitespaceEvent: new WhitespaceEvent(ws =>
+                {
+                    Assert.Equal("\n".ToCharArray(), ws.Characters.ToArray());
+                    Assert.Equal(1, ws.Count);
+                    Assert.Equal("\n*1", ws.ToString());
+                    dispatched++;
+                }));
 
-            onEscapeSequence.Publish(new VT.Events.EscapeSequenceEvent(EscapeCommand.LineFeed, default, IgnoredData.None));
+            onEscapeSequence.Publish(new VT.Events.EscapeSequenceEventData(EscapeCommand.LineFeed, default, IgnoredData.None));
             Assert.Equal(1, dispatched);
         }
-        
+
         [Fact]
         internal static void TerminalEmulator_EscapeSequence_NextLine()
         {
-            var sut = new TerminalEmulator();
-            var onEscapeSequence = new Event<VT.Events.EscapeSequenceEvent>("EscapeSequence");
-            sut.OnEscapeSequence = onEscapeSequence;
+            var onEscapeSequence = new VT.Events.EscapeSequenceEvent(DefaultHandler);
 
             var dispatched = 0;
-            sut.Whitespace = new Event<WhitespaceEvent>("Whitespace", ws =>
-            {
-                Assert.Equal("\r\n".ToCharArray(), ws.Characters.ToArray());
-                Assert.Equal(1, ws.Count);
-                Assert.Equal("\r\n*1", ws.ToString());
-                dispatched++;
-            });
+            var sut = new TerminalEmulator(onEscapeSequenceEvent: onEscapeSequence,
+                whitespaceEvent: new WhitespaceEvent(ws =>
+                {
+                    Assert.Equal("\r\n".ToCharArray(), ws.Characters.ToArray());
+                    Assert.Equal(1, ws.Count);
+                    Assert.Equal("\r\n*1", ws.ToString());
+                    dispatched++;
+                }));
 
-            onEscapeSequence.Publish(new VT.Events.EscapeSequenceEvent(EscapeCommand.NextLine, default, IgnoredData.None));
+            onEscapeSequence.Publish(new VT.Events.EscapeSequenceEventData(EscapeCommand.NextLine, default, IgnoredData.None));
             Assert.Equal(1, dispatched);
         }
-        
+
         [Fact]
         internal static void TerminalEmulator_EscapeSequence_ReverseIndex()
         {
-            var sut = new TerminalEmulator();
-            var onEscapeSequence = new Event<VT.Events.EscapeSequenceEvent>("EscapeSequence");
-            sut.OnEscapeSequence = onEscapeSequence;
+            var onEscapeSequence = new VT.Events.EscapeSequenceEvent(DefaultHandler);
 
             var dispatched = 0;
-            sut.MoveCursor = new Event<MoveCursorEvent>("MoveCursor", move =>
-            {
-                Assert.Equal(MoveOrigin.Inverse, move.Origin);
-                Assert.Equal(MoveAxis.Row, move.Axis);
-                Assert.Equal(1, move.Count);
-                Assert.Equal("Inverse Row 1", move.ToString());
-                dispatched++;
-            });
+            var sut = new TerminalEmulator(onEscapeSequenceEvent: onEscapeSequence,
+                moveCursorEvent: new MoveCursorEvent(move =>
+                {
+                    Assert.Equal(MoveOrigin.Inverse, move.Origin);
+                    Assert.Equal(MoveAxis.Row, move.Axis);
+                    Assert.Equal(1, move.Count);
+                    Assert.Equal("Inverse Row 1", move.ToString());
+                    dispatched++;
+                }));
 
-            onEscapeSequence.Publish(new VT.Events.EscapeSequenceEvent(EscapeCommand.ReverseIndex, default, IgnoredData.None));
+            onEscapeSequence.Publish(new VT.Events.EscapeSequenceEventData(EscapeCommand.ReverseIndex, default, IgnoredData.None));
             Assert.Equal(1, dispatched);
         }
-        
+
         [Fact]
         internal static void TerminalEmulator_EscapeSequence_IdentifyTerminal()
         {
-            var sut = new TerminalEmulator();
-            var onEscapeSequence = new Event<VT.Events.EscapeSequenceEvent>("EscapeSequence");
-            sut.OnEscapeSequence = onEscapeSequence;
+            var onEscapeSequence = new VT.Events.EscapeSequenceEvent(DefaultHandler);
 
             var dispatched = 0;
-            sut.IdentifyTerminal = new Event<IdentifyTerminalEvent>("IdentifyTerminal", id =>
-            {
-                Assert.Equal(string.Empty, id.ToString());
-                dispatched++;
-            });
+            var sut = new TerminalEmulator(onEscapeSequenceEvent: onEscapeSequence,
+                identifyTerminalEvent: new IdentifyTerminalEvent(id =>
+                {
+                    Assert.Equal(string.Empty, id.ToString());
+                    dispatched++;
+                }));
 
-            onEscapeSequence.Publish(new VT.Events.EscapeSequenceEvent(EscapeCommand.IdentifyTerminal, default, IgnoredData.None));
+            onEscapeSequence.Publish(new VT.Events.EscapeSequenceEventData(EscapeCommand.IdentifyTerminal, default, IgnoredData.None));
             Assert.Equal(1, dispatched);
         }
-        
+
         [Fact]
         internal static void TerminalEmulator_EscapeSequence_ResetState()
         {
-            var sut = new TerminalEmulator();
-            var onEscapeSequence = new Event<VT.Events.EscapeSequenceEvent>("EscapeSequence");
-            sut.OnEscapeSequence = onEscapeSequence;
+            var onEscapeSequence = new VT.Events.EscapeSequenceEvent(DefaultHandler);
 
             var dispatched = 0;
-            sut.State = new Event<StateEvent>("State", state =>
-            {
-                Assert.Equal(States.All, state.States);
-                Assert.Equal(StateMode.Reset, state.Mode);
-                Assert.Equal("Reset All", state.ToString());
-                dispatched++;
-            });
+            var sut = new TerminalEmulator(onEscapeSequenceEvent: onEscapeSequence,
+                stateEvent: new StateEvent(state =>
+                {
+                    Assert.Equal(States.All, state.States);
+                    Assert.Equal(StateMode.Reset, state.Mode);
+                    Assert.Equal("Reset All", state.ToString());
+                    dispatched++;
+                }));
 
-            onEscapeSequence.Publish(new VT.Events.EscapeSequenceEvent(EscapeCommand.ResetState, default, IgnoredData.None));
+            onEscapeSequence.Publish(new VT.Events.EscapeSequenceEventData(EscapeCommand.ResetState, default, IgnoredData.None));
             Assert.Equal(1, dispatched);
         }
-        
+
         [Fact]
         internal static void TerminalEmulator_EscapeSequence_SaveCursorPosition()
         {
-            var sut = new TerminalEmulator();
-            var onEscapeSequence = new Event<VT.Events.EscapeSequenceEvent>("EscapeSequence");
-            sut.OnEscapeSequence = onEscapeSequence;
-
             var expected = new HashSet<MoveAxis>
             {
                 MoveAxis.Row, MoveAxis.Column
             };
-            var dispatched = 0;
-            sut.MoveCursor = new Event<MoveCursorEvent>("MoveCursor", move =>
-            {
-                Assert.Contains(move.Axis, expected);
-                expected.Remove(move.Axis);
-                Assert.Equal(MoveOrigin.Store, move.Origin);
-                Assert.Equal(0, move.Count);
-                Assert.Equal(FormattableString.Invariant($"Store {move.Axis} 0"), move.ToString());
-                dispatched++;
-            });
 
-            onEscapeSequence.Publish(new VT.Events.EscapeSequenceEvent(EscapeCommand.SaveCursorPosition, default, IgnoredData.None));
-            Assert.Equal(2, dispatched);
+            var onEscapeSequence = new VT.Events.EscapeSequenceEvent(DefaultHandler);
+            var sut = new TerminalEmulator(onEscapeSequenceEvent: onEscapeSequence,
+                moveCursorEvent: new MoveCursorEvent(move =>
+                {
+                    Assert.Contains(move.Axis, expected);
+                    expected.Remove(move.Axis);
+                    Assert.Equal(MoveOrigin.Store, move.Origin);
+                    Assert.Equal(0, move.Count);
+                    Assert.Equal(FormattableString.Invariant($"Store {move.Axis} 0"), move.ToString());
+                }));
+
+            onEscapeSequence.Publish(new VT.Events.EscapeSequenceEventData(EscapeCommand.SaveCursorPosition, default, IgnoredData.None));
             Assert.Empty(expected);
         }
-        
+
         [Fact]
         internal static void TerminalEmulator_EscapeSequence_RestoreCursorPosition()
         {
-            var sut = new TerminalEmulator();
-            var onEscapeSequence = new Event<VT.Events.EscapeSequenceEvent>("EscapeSequence");
-            sut.OnEscapeSequence = onEscapeSequence;
-
             var expected = new HashSet<MoveAxis>
             {
                 MoveAxis.Row, MoveAxis.Column
             };
-            var dispatched = 0;
-            sut.MoveCursor = new Event<MoveCursorEvent>("MoveCursor", move =>
-            {
-                Assert.Contains(move.Axis, expected);
-                expected.Remove(move.Axis);
-                Assert.Equal(MoveOrigin.Restore, move.Origin);
-                Assert.Equal(0, move.Count);
-                Assert.Equal(FormattableString.Invariant($"Restore {move.Axis} 0"), move.ToString());
-                dispatched++;
-            });
 
-            onEscapeSequence.Publish(new VT.Events.EscapeSequenceEvent(EscapeCommand.RestoreCursorPosition, default, IgnoredData.None));
-            Assert.Equal(2, dispatched);
+            var onEscapeSequence = new VT.Events.EscapeSequenceEvent(DefaultHandler);
+            var sut = new TerminalEmulator(onEscapeSequenceEvent: onEscapeSequence,
+                moveCursorEvent: new MoveCursorEvent(move =>
+                {
+                    Assert.Contains(move.Axis, expected);
+                    expected.Remove(move.Axis);
+                    Assert.Equal(MoveOrigin.Restore, move.Origin);
+                    Assert.Equal(0, move.Count);
+                    Assert.Equal(FormattableString.Invariant($"Restore {move.Axis} 0"), move.ToString());
+                }));
+
+            onEscapeSequence.Publish(new VT.Events.EscapeSequenceEventData(EscapeCommand.RestoreCursorPosition, default, IgnoredData.None));
             Assert.Empty(expected);
         }
-        
+
         [Fact]
         internal static void TerminalEmulator_EscapeSequence_SetKeypadApplicationMode()
         {
-            var sut = new TerminalEmulator();
-            var onEscapeSequence = new Event<VT.Events.EscapeSequenceEvent>("EscapeSequence");
-            sut.OnEscapeSequence = onEscapeSequence;
+            var onEscapeSequence = new VT.Events.EscapeSequenceEvent(DefaultHandler);
 
             var dispatched = 0;
-            sut.State = new Event<StateEvent>("State", state =>
-            {
-                Assert.Equal(States.KeypadApplicationMode, state.States);
-                Assert.Equal(StateMode.Set, state.Mode);
-                Assert.Equal("Set KeypadApplicationMode", state.ToString());
-                dispatched++;
-            });
+            var sut = new TerminalEmulator(onEscapeSequenceEvent: onEscapeSequence,
+                stateEvent: new StateEvent(state =>
+                {
+                    Assert.Equal(States.KeypadApplicationMode, state.States);
+                    Assert.Equal(StateMode.Set, state.Mode);
+                    Assert.Equal("Set KeypadApplicationMode", state.ToString());
+                    dispatched++;
+                }));
 
-            onEscapeSequence.Publish(new VT.Events.EscapeSequenceEvent(EscapeCommand.SetKeypadApplicationMode, default, IgnoredData.None));
+            onEscapeSequence.Publish(new VT.Events.EscapeSequenceEventData(EscapeCommand.SetKeypadApplicationMode, default, IgnoredData.None));
             Assert.Equal(1, dispatched);
         }
-        
+
         [Fact]
         internal static void TerminalEmulator_EscapeSequence_UnsetKeypadApplicationMode()
         {
-            var sut = new TerminalEmulator();
-            var onEscapeSequence = new Event<VT.Events.EscapeSequenceEvent>("EscapeSequence");
-            sut.OnEscapeSequence = onEscapeSequence;
+            var onEscapeSequence = new VT.Events.EscapeSequenceEvent(DefaultHandler);
 
             var dispatched = 0;
-            sut.State = new Event<StateEvent>("State", state =>
-            {
-                Assert.Equal(States.KeypadApplicationMode, state.States);
-                Assert.Equal(StateMode.Unset, state.Mode);
-                Assert.Equal("Unset KeypadApplicationMode", state.ToString());
-                dispatched++;
-            });
+            var sut = new TerminalEmulator(onEscapeSequenceEvent: onEscapeSequence,
+                stateEvent: new StateEvent(state =>
+                {
+                    Assert.Equal(States.KeypadApplicationMode, state.States);
+                    Assert.Equal(StateMode.Unset, state.Mode);
+                    Assert.Equal("Unset KeypadApplicationMode", state.ToString());
+                    dispatched++;
+                }));
 
-            onEscapeSequence.Publish(new VT.Events.EscapeSequenceEvent(EscapeCommand.UnsetKeypadApplicationMode, default, IgnoredData.None));
+            onEscapeSequence.Publish(new VT.Events.EscapeSequenceEventData(EscapeCommand.UnsetKeypadApplicationMode, default, IgnoredData.None));
             Assert.Equal(1, dispatched);
         }
     }

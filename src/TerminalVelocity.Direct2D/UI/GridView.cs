@@ -1,59 +1,49 @@
-using System;
-using System.Composition;
+﻿using System;
 using SharpDX;
 using SharpDX.Direct2D1;
 using SharpDX.DirectWrite;
 using TerminalVelocity.Direct2D.Events;
-using TerminalVelocity.Preferences;
-using WinApi.User32;
+using WinApi.DxUtils.Component;
 
 namespace TerminalVelocity.Direct2D.UI
 {
-    [Shared, Export]
     public sealed class GridView
     {
-        [Import(RenderEvent.ContractName)]
-        public Event<RenderEvent> OnRender { private get; set; }
-
-        private readonly DeviceContext _context;
+        private readonly Dx11Component _component;
         private readonly SharpDX.DirectWrite.Factory _factory;
+        private readonly RenderEvent _renderEvent;
 
-        private readonly Configurable<Brush> _color0;
-        private readonly Configurable<Brush> _color1;
-        private readonly Configurable<TextFormat> _font;
+        private readonly BrushProvider _brushes;
+        private readonly FontProvider _fonts;
 
         private RectangleF _frame;
 
-        [ImportingConstructor]
         public GridView(
-            [Import(BrushProvider.TerminalColor0Contract)] Configurable<Brush> color0,
-            [Import(BrushProvider.TerminalColor1Contract)] Configurable<Brush> color1,
-            [Import(FontProvider.TerminalTextContract)] Configurable<TextFormat> font,
-            [Import] SharpDX.DirectWrite.Factory factory,
-            [Import] DeviceContext context)
+            Dx11Component component,
+            BrushProvider brushes,
+            FontProvider fonts,
+            SharpDX.DirectWrite.Factory factory,
+            RenderEvent renderEvent)
         {
-            _context = context;
-            _color0 = color0;
-            _color1 = color1;
-            _font = font;
+            _component = component;
+            _brushes = brushes;
+            _fonts = fonts;
             _factory = factory;
+            _renderEvent = renderEvent;
         }
 
-        public void Layout(in RectangleF container)
-        {
-            _frame = container;
-        }
+        public void Layout(in RectangleF container) => _frame = container;
 
         public void Render()
         {
-            _context.Transform = Matrix3x2.Identity;
-            _context.FillRectangle(_frame, _color0);
-            var origin = _frame.TopLeft;
+            _component.D2D.Context.Transform = Matrix3x2.Identity;
+            _component.D2D.Context.FillRectangle(_frame, _brushes.TerminalColor0);
+            Vector2 origin = _frame.TopLeft;
             var text = "test => text 😁 " + Environment.TickCount;
 
-            using (var layout = new TextLayout(_factory, text, _font, _frame.Width, _frame.Height))
+            using (var layout = new TextLayout(_factory, text, _fonts.TerminalText, _frame.Width, _frame.Height))
             {
-                _context.DrawTextLayout(origin, layout, _color1, DrawTextOptions.EnableColorFont);
+                _component.D2D.Context.DrawTextLayout(origin, layout, _brushes.TerminalColor1, DrawTextOptions.EnableColorFont);
                 layout.SetFontWeight(FontWeight.Bold, new TextRange(1, 2));
                 origin.Y += layout.Metrics.Height;
             }

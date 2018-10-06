@@ -1,13 +1,22 @@
-using System;
+﻿using System;
 using System.Runtime.CompilerServices;
 using System.Text;
+using TerminalVelocity.Eventing;
 
 namespace TerminalVelocity.VT.Events
 {
-    public readonly struct OsCommandEvent
+    [Event]
+    public sealed class OsCommandEvent : Event<InteractionEventLoop, OsCommandEventData>
     {
-        public const string ContractName = "OSC.Events.VT.TerminalVelocity";
+        public OsCommandEvent(InteractionEventLoop eventLoop) : base(eventLoop) { }
 
+        public OsCommandEvent(EventSubscriber<OsCommandEventData> handler) : base(handler) { }
+
+        public OsCommandEvent(Action<OsCommandEventData> handler) : base(handler) { }
+    }
+
+    public readonly struct OsCommandEventData
+    {
         public int Length => _parameters.Length;
 
         public ReadOnlySpan<byte> this[int index] => _parameters.Span[index].Span;
@@ -18,7 +27,7 @@ namespace TerminalVelocity.VT.Events
 
         public readonly IgnoredData Ignored;
 
-        public OsCommandEvent(
+        public OsCommandEventData(
             ReadOnlyMemory<ReadOnlyMemory<byte>> parameters,
             IgnoredData ignored)
         {
@@ -35,7 +44,7 @@ namespace TerminalVelocity.VT.Events
             }
             Ignored = ignored;
         }
-        
+
         public override string ToString()
         {
             var sb = new StringBuilder();
@@ -44,7 +53,7 @@ namespace TerminalVelocity.VT.Events
 
             for (var i = 0; i < _parameters.Span.Length; i++)
             {
-                sb.Append(i== 0 ? string.Empty : ";");
+                sb.Append(i == 0 ? string.Empty : ";");
                 sb.Append(Encoding.UTF8.GetString(_parameters.Span[i].Span));
             }
 
@@ -54,7 +63,7 @@ namespace TerminalVelocity.VT.Events
 
             return sb.ToString();
         }
-        
+
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private static bool TryParseInt16(ReadOnlySpan<byte> raw, out short result)
         {

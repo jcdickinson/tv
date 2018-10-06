@@ -1,18 +1,24 @@
-using System;
+﻿using System;
+using TerminalVelocity.Eventing;
 
 namespace TerminalVelocity.VT.Events
 {
-    public readonly struct PutEvent
+    [Event]
+    public sealed class PutEvent : Event<InteractionEventLoop, PutEventData>
     {
-        public const string ContractName = "Put.DCS.Events.VT.TerminalVelocity";
+        public PutEvent(InteractionEventLoop eventLoop) : base(eventLoop) { }
 
+        public PutEvent(EventSubscriber<PutEventData> handler) : base(handler) { }
+
+        public PutEvent(Action<PutEventData> handler) : base(handler) { }
+    }
+
+    public readonly struct PutEventData
+    {
         public readonly byte Byte;
 
-        public PutEvent(byte @byte) 
-        { 
-            Byte = @byte;
-        }
-        
+        public PutEventData(byte @byte) => Byte = @byte;
+
         public override string ToString() => ((char)Byte).ToString();
     }
 }
