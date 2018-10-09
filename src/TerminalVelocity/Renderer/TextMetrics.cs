@@ -1,4 +1,8 @@
-﻿namespace TerminalVelocity.Renderer
+﻿/* Copyright (c) Jonathan Dickinson and contributors. All rights reserved.
+ * Licensed under the MIT license. See LICENSE file in the project root for details.
+*/
+
+namespace TerminalVelocity.Renderer
 {
     /// <summary>
     /// Contains the metrics associated with text after layout.

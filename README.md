@@ -19,4 +19,4 @@ Terminal Velocity is in the storming stage of development, so I will probably ru
 
 ## License
 
-MIT licensed. Portions (anything to do with VT/ANSI) are [Apache License 2.0.](https://github.com/jwilm/alacritty/blob/master/LICENSE-APACHE)
+MIT licensed. Portions (anything to do with ANSI) are [Apache License 2.0.](https://github.com/jwilm/alacritty/blob/master/LICENSE-APACHE), see NOTICES.

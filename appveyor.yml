@@ -66,6 +66,8 @@ before_package:
     -c %CONFIGURATION%
     -o "%APPVEYOR_BUILD_FOLDER%\publish"
     -r win10-x64
+- copy LICENSE %APPVEYOR_BUILD_FOLDER%\publish\LICENSE
+- copy NOTICES %APPVEYOR_BUILD_FOLDER%\publish\NOTICES
 - >-
     7z
     a
