@@ -1,8 +1,8 @@
 ﻿using System;
 using System.Collections.Concurrent;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.Threading;
-using TerminalVelocity.Collections.Concurrent;
 
 namespace TerminalVelocity.Eventing
 {
@@ -12,15 +12,15 @@ namespace TerminalVelocity.Eventing
     {
         private sealed class Subscriber : IDisposable
         {
-            public ConcurrentLinkedList<Subscriber>.SingleLinkNode Node { get; }
-            public EventSubscriber<TEvent> Handler { get; }
+            public readonly LinkedListNode<Subscriber> Node;
+            public readonly EventSubscriber<TEvent> Handler;
             private readonly Event<TEventLoop, TEvent> _eventLoop;
             
             public Subscriber(EventSubscriber<TEvent> handler, Event<TEventLoop, TEvent> eventLoop)
             {
                 Handler = handler;
                 _eventLoop = eventLoop;
-                Node = new ConcurrentLinkedList<Subscriber>.SingleLinkNode(this);
+                Node = new LinkedListNode<Subscriber>(this);
             }
 
             public void Dispose() => _eventLoop.Unsubscribe(Node);
@@ -62,14 +62,16 @@ namespace TerminalVelocity.Eventing
 
         private readonly TEventLoop _eventLoop;
         private readonly ConcurrentQueue<EventPublication> _events;
-        private readonly ConcurrentLinkedList<Subscriber> _subscribers;
+        private readonly LinkedList<Subscriber> _subscribers;
+        private readonly ReaderWriterLockSlim _subscribersLock;
         public string Name { get; }
         private long _idFactory = 1;
 
         private Event()
         {
             _events = new ConcurrentQueue<EventPublication>();
-            _subscribers = new ConcurrentLinkedList<Subscriber>();
+            _subscribers = new LinkedList<Subscriber>();
+            _subscribersLock = new ReaderWriterLockSlim();
 
             Name = GetType().FullName;
         }
@@ -91,7 +93,7 @@ namespace TerminalVelocity.Eventing
             var id = (ulong)Interlocked.Increment(ref _idFactory);
             if (_eventLoop == null)
             {
-                Publish(data);
+                PublishEvent(data);
             }
             else if (_eventLoop.OnEventPublishing((ulong)id, ref data))
             {
@@ -100,17 +102,41 @@ namespace TerminalVelocity.Eventing
             }
         }
 
-        public void Dispose() => _subscribers.Clear();
+        public void Dispose()
+        {
+            _subscribersLock.Dispose();
+            _subscribers.Clear();
+        }
 
-        private void Unsubscribe(ConcurrentLinkedList<Subscriber>.SingleLinkNode node)
-            => _subscribers.Remove(node);
+        private void Unsubscribe(LinkedListNode<Subscriber> node)
+        {
+            try
+            {
+                _subscribersLock.EnterWriteLock();
+                _subscribers.Remove(node);
+            }
+            finally
+            {
+                _subscribersLock.ExitWriteLock();
+            }
+        }
 
         public IDisposable Subscribe(EventSubscriber<TEvent> handler)
         {
             if (handler == null) throw new ArgumentNullException(nameof(handler));
 
             var subscriber = new Subscriber(handler, this);
-            _subscribers.AddFirst(subscriber.Node);
+
+            try
+            {
+                _subscribersLock.EnterWriteLock();
+                _subscribers.AddFirst(subscriber.Node);
+            }
+            finally
+            {
+                _subscribersLock.ExitWriteLock();
+            }
+
             return subscriber;
         }
 
@@ -136,12 +162,20 @@ namespace TerminalVelocity.Eventing
 
         private EventStatus PublishEvent(in TEvent e)
         {
-            foreach (Subscriber subscriber in _subscribers)
+            try
             {
-                if (subscriber.Handler(e) == EventStatus.Halt)
-                    return EventStatus.Halt;
+                _subscribersLock.EnterUpgradeableReadLock();
+                foreach (Subscriber subscriber in _subscribers)
+                {
+                    if (subscriber.Handler(e) == EventStatus.Halt)
+                        return EventStatus.Halt;
+                }
+                return EventStatus.Continue;
             }
-            return EventStatus.Continue;
+            finally
+            {
+                _subscribersLock.ExitUpgradeableReadLock();
+            }
         }
 
         public sealed override bool Equals(object obj) => base.Equals(obj);

@@ -5,7 +5,6 @@ using System.Drawing;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using System.Text;
-using TerminalVelocity.Eventing;
 
 namespace TerminalVelocity.Terminal
 {
@@ -242,20 +241,23 @@ namespace TerminalVelocity.Terminal
 
         public void OnControlSequenceCommand(ControlSequenceCommand command, ReadOnlySpan<byte> intermediates, ReadOnlySpan<long> parameters, IgnoredData ignored = default)
         {
+            var priv = intermediates.Optional(0).GetValueOrDefault(0) == '?';
+
+            long? row, column;
             switch (command)
             {
                 case ControlSequenceCommand.InsertBlank:
                     _events.InsertBlank?.Invoke(parameters.Optional(0).GetValueOrDefault(1));
                     break;
                 case ControlSequenceCommand.MoveUp:
-                    _events.MoveUp?.Invoke(parameters.Optional(0).GetValueOrDefault(), false);
+                    _events.MoveUp?.Invoke(parameters.Optional(0).GetValueOrDefault(1), false);
                     break;
                 case ControlSequenceCommand.RepeatPrecedingCharacter:
                     if (_precedingChar.HasValue)
                     {
                         var count = parameters.Optional(0).GetValueOrDefault(1);
                         var c = _precedingChar.Value;
-                        ReadOnlySpan<char> chr = MemoryMarshal.CreateReadOnlySpan(ref c, 1);
+                        ReadOnlySpan<char> chr = MapCharacters(MemoryMarshal.CreateReadOnlySpan(ref c, 1));
                         for (var i = 0; i < count; i++)
                             _events.Input?.Invoke(chr);
                     }
@@ -269,11 +271,177 @@ namespace TerminalVelocity.Terminal
                     break;
                 case ControlSequenceCommand.MoveForward1:
                 case ControlSequenceCommand.MoveForward2:
-                    _events.MoveForward(parameters.Optional(0).GetValueOrDefault(1));
+                    _events.MoveForward?.Invoke(parameters.Optional(0).GetValueOrDefault(1), false);
+                    break;
+                case ControlSequenceCommand.MoveBackward:
+                    _events.MoveBackward?.Invoke(parameters.Optional(0).GetValueOrDefault(1), false);
+                    break;
+                case ControlSequenceCommand.MoveDownAndCr:
+                    _events.MoveDown?.Invoke(parameters.Optional(0).GetValueOrDefault(1), true);
+                    break;
+                case ControlSequenceCommand.MoveUpAndCr:
+                    _events.MoveUp?.Invoke(parameters.Optional(0).GetValueOrDefault(1), true);
+                    break;
+                case ControlSequenceCommand.ClearTabulation:
+                    var tabClearMode = (TabulationClearMode)parameters.Optional(0).GetValueOrDefault(0);
+                    _events.ClearTabulation?.Invoke(tabClearMode);
+                    break;
+                case ControlSequenceCommand.GotoColumn1:
+                case ControlSequenceCommand.GotoColumn2:
+                    column = parameters.Optional(0).GetValueOrDefault(1) - 1;
+                    _events.Goto?.Invoke(column: column);
+                    break;
+                case ControlSequenceCommand.Goto1:
+                case ControlSequenceCommand.Goto2:
+                    column = parameters.Optional(0).GetValueOrDefault(1) - 1;
+                    row = parameters.Optional(1).GetValueOrDefault(1) - 1;
+                    _events.Goto?.Invoke(column, row);
+                    break;
+                case ControlSequenceCommand.MoveForwardTabs:
+                    _events.MoveForward?.Invoke(parameters.Optional(0).GetValueOrDefault(1), true);
+                    break;
+                case ControlSequenceCommand.ClearScreen:
+                    var clearScreenMode = (ClearMode)parameters.Optional(0).GetValueOrDefault(0);
+                    _events.ClearScreen?.Invoke(clearScreenMode);
+                    break;
+                case ControlSequenceCommand.ClearLine:
+                    var clearLineMode = (LineClearMode)parameters.Optional(0).GetValueOrDefault(0);
+                    _events.ClearLine?.Invoke(clearLineMode);
+                    break;
+                case ControlSequenceCommand.ScrollUp:
+                    _events.ScrollUp?.Invoke(parameters.Optional(0).GetValueOrDefault(1));
+                    break;
+                case ControlSequenceCommand.ScrollDown:
+                    _events.ScrollDown?.Invoke(parameters.Optional(0).GetValueOrDefault(1));
+                    break;
+                case ControlSequenceCommand.InsertBlankLines:
+                    _events.InsertBlankLines?.Invoke(parameters.Optional(0).GetValueOrDefault(1));
+                    break;
+                case ControlSequenceCommand.UnsetMode:
+                    for (var i = 0; i < parameters.Length; i++)
+                        _events.UnsetMode?.Invoke((Mode)parameters[i]);
+                    break;
+                case ControlSequenceCommand.DeleteLines:
+                    _events.DeleteLines?.Invoke(parameters.Optional(0).GetValueOrDefault(1));
+                    break;
+                case ControlSequenceCommand.EraseChars:
+                    _events.EraseCharacters?.Invoke(parameters.Optional(0).GetValueOrDefault(1));
+                    break;
+                case ControlSequenceCommand.DeleteChars:
+                    _events.DeleteCharacters?.Invoke(parameters.Optional(0).GetValueOrDefault(1));
+                    break;
+                case ControlSequenceCommand.MoveBackwardTabs:
+                    _events.MoveBackward?.Invoke(parameters.Optional(0).GetValueOrDefault(1), true);
+                    break;
+                case ControlSequenceCommand.GotoLine:
+                    _events.Goto?.Invoke(line: parameters.Optional(0).GetValueOrDefault(1) - 1);
+                    break;
+                case ControlSequenceCommand.SetMode:
+                    for (var i = 0; i < parameters.Length; i++)
+                        _events.SetMode?.Invoke((Mode)parameters[i]);
                     break;
                 case ControlSequenceCommand.TerminalAttribute:
+                    if (parameters.Length == 0)
+                    {
+                        _events.TerminalAttribute?.Invoke(
+                            TerminalAttribute.Reset);
+                        break;
+                    }
+
+                    for (var i = 0; i < parameters.Length; i++)
+                    {
+                        var index = parameters[i];
+
+                        if (index < 30)
+                        {
+                            _events.TerminalAttribute?.Invoke(
+                                (TerminalAttribute)index);
+                            continue;
+                        }
+
+                        if (index == 38 || index == 48)
+                        {
+                            var consumed = TryParseColor(parameters.Slice(i), out NamedColor? ix, out Color? color);
+                            if (consumed == 0) break;
+                            _events.TerminalAttribute?.Invoke(
+                                (TerminalAttribute)index, index: ix, color: color);
+                            i += consumed;
+                            continue;
+                        }
+
+                        if (index == 39)
+                        {
+                            _events.TerminalAttribute?.Invoke(
+                                TerminalAttribute.SetForeground, index: NamedColor.Foreground);
+                            continue;
+                        }
+
+                        if (index < 40)
+                        {
+                            var ix = (NamedColor)(index - 30);
+                            _events.TerminalAttribute?.Invoke(
+                                TerminalAttribute.SetForeground, index: ix);
+                            continue;
+                        }
+
+                        if (index == 49)
+                        {
+                            _events.TerminalAttribute?.Invoke(
+                                TerminalAttribute.SetBackground, index: NamedColor.Background);
+                            continue;
+                        }
+
+                        if (index < 50)
+                        {
+                            var ix = (NamedColor)(index - 40);
+                            _events.TerminalAttribute?.Invoke(
+                                TerminalAttribute.SetForeground, index: ix);
+                            continue;
+                        }
+
+                        if (index < 90)
+                            continue;
+
+                        if (index < 100)
+                        {
+                            var ix = (NamedColor)(index - 90 + (int)NamedColor.BrightBlack);
+                            _events.TerminalAttribute?.Invoke(
+                                TerminalAttribute.SetForeground, index: ix);
+                            continue;
+                        }
+
+                        if (index < 108)
+                        {
+                            var ix = (NamedColor)(index - 100 + (int)NamedColor.BrightBlack);
+                            _events.TerminalAttribute?.Invoke(
+                                TerminalAttribute.SetBackground, index: ix);
+                            continue;
+                        }
+                    }
                     break;
-                default:
+                case ControlSequenceCommand.DeviceStatus:
+                    _events.DeviceStatus?.Invoke(parameters.Optional(0).GetValueOrDefault(0));
+                    break;
+                case ControlSequenceCommand.SetScrollingRegion:
+                    if (priv) break;
+                    _events.SetScrollingRegion?.Invoke(
+                        parameters.Optional(0) - 1,
+                        parameters.Optional(1) - 1);
+                    break;
+                case ControlSequenceCommand.SaveCursorPosition:
+                    _events.SaveCursorPosition?.Invoke();
+                    break;
+                case ControlSequenceCommand.RestoreCursorPosition:
+                    _events.RestoreCursorPosition?.Invoke();
+                    break;
+                case ControlSequenceCommand.SetCursorStyle:
+                    switch (parameters.Optional(0).GetValueOrDefault(0))
+                    {
+                        case 0: _events.SetCursorStyle?.Invoke(default); break;
+                        case 1: case 2: _events.SetCursorStyle?.Invoke(CursorStyle.Block); break;
+                        case 3: case 4: _events.SetCursorStyle?.Invoke(CursorStyle.Underline); break;
+                        case 5: case 6: _events.SetCursorStyle?.Invoke(CursorStyle.Beam); break;
+                    }
                     break;
             }
         }
@@ -299,7 +467,7 @@ namespace TerminalVelocity.Terminal
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private bool TryParseColor(ReadOnlySpan<byte> raw, out Color color)
+        private static bool TryParseColor(ReadOnlySpan<byte> raw, out Color color)
         {
             color = default;
             // Expect that color argument looks like "rgb:xx/xx/xx" or "#xxxxxx"
@@ -338,7 +506,7 @@ namespace TerminalVelocity.Terminal
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private byte Hex(byte b1, byte b2)
+        private static byte Hex(byte b1, byte b2)
         {
             b1 = Hexit(b1);
             b2 = Hexit(b2);
@@ -348,7 +516,7 @@ namespace TerminalVelocity.Terminal
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private byte Hexit(byte value)
+        private static byte Hexit(byte value)
         {
             // Ignore errors in favor of speed.
             // https://gist.github.com/jcdickinson/9a4205287ae107e9f4e5f6764f432db9
@@ -370,7 +538,7 @@ namespace TerminalVelocity.Terminal
             return false;
         }
 
-        private bool TryParseCharSetIndex(byte raw, out int result)
+        private static bool TryParseCharSetIndex(byte raw, out int result)
         {
             switch (raw)
             {
@@ -382,6 +550,57 @@ namespace TerminalVelocity.Terminal
 
             result = -1;
             return false;
+        }
+
+        private static int TryParseColor(ReadOnlySpan<long> args, out NamedColor? index, out Color? color)
+        {
+            if (args.Length <= 1)
+            {
+                index = default;
+                color = default;
+                return 0;
+            }
+
+            switch (args[1])
+            {
+                case 2:  // RGB
+                    if (args.Length <= 4)
+                    {
+                        index = default;
+                        color = default;
+                        return 0;
+                    }
+
+                    var r = args[2];
+                    var g = args[3];
+                    var b = args[4];
+
+                    if (r < 0 || r > 255 || g < 0 || g > 255 || b < 0 || b > 255)
+                    {
+                        index = default;
+                        color = default;
+                        return 4;
+                    }
+
+                    index = default;
+                    color = Color.FromArgb((int)r, (int)g, (int)b);
+                    return 4;
+                case 5: // index
+                    if (args.Length <= 2)
+                    {
+                        index = default;
+                        color = default;
+                        return 0;
+                    }
+
+                    index = (NamedColor)args[2];
+                    color = default;
+                    return 2;
+                default:
+                    index = default;
+                    color = default;
+                    return 0;
+            }
         }
     }
 }

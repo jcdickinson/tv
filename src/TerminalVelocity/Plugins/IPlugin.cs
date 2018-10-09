@@ -2,8 +2,5 @@
 
 namespace TerminalVelocity.Plugins
 {
-    public interface IPlugin : IDisposable
-    {
-
-    }
+    public interface IPlugin : IDisposable { }
 }

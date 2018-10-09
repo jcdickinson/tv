@@ -29,8 +29,24 @@ namespace TerminalVelocity.Terminal
         public delegate void InsertBlankEvent(long count);
         public delegate void MoveUpEvent(long count, bool cr);
         public delegate void MoveDownEvent(long count, bool cr);
-        public delegate void MoveForwardEvent(long count);
-        public delegate void MoveBackwardEvent(long count);
+        public delegate void MoveForwardEvent(long count, bool tabs);
+        public delegate void MoveBackwardEvent(long count, bool tabs);
+        public delegate void ClearTabulationEvent(TabulationClearMode clearMode);
+        public delegate void GotoEvent(long? column = default, long? line = default);
+        public delegate void ClearScreenEvent(ClearMode clearMode);
+        public delegate void ClearLineEvent(LineClearMode clearMode);
+        public delegate void ScrollUpEvent(long count);
+        public delegate void ScrollDownEvent(long count);
+        public delegate void InsertBlankLinesEvent(long count);
+        public delegate void UnsetModeEvent(Mode mode);
+        public delegate void DeleteLinesEvent(long count);
+        public delegate void EraseCharactersEvent(long count);
+        public delegate void DeleteCharactersEvent(long count);
+        public delegate void SetModeEvent(Mode mode);
+        public delegate void TerminalAttributeEvent(TerminalAttribute attribute, NamedColor? index = default, in Color? color = default);
+        public delegate void DeviceStatusEvent(long param);
+        public delegate void SetScrollingRegionEvent(long? top, long? bottom);
+        public delegate void SetCursorStyleEvent(CursorStyle? style);
 
         public InputEvent Input;
         public PutTabEvent PutTab;
@@ -58,5 +74,21 @@ namespace TerminalVelocity.Terminal
         public MoveDownEvent MoveDown;
         public MoveForwardEvent MoveForward;
         public MoveBackwardEvent MoveBackward;
+        public ClearTabulationEvent ClearTabulation;
+        public GotoEvent Goto;
+        public ClearScreenEvent ClearScreen;
+        public ClearLineEvent ClearLine;
+        public ScrollUpEvent ScrollUp;
+        public ScrollDownEvent ScrollDown;
+        public InsertBlankLinesEvent InsertBlankLines;
+        public UnsetModeEvent UnsetMode;
+        public DeleteLinesEvent DeleteLines;
+        public EraseCharactersEvent EraseCharacters;
+        public DeleteCharactersEvent DeleteCharacters;
+        public SetModeEvent SetMode;
+        public TerminalAttributeEvent TerminalAttribute;
+        public DeviceStatusEvent DeviceStatus;
+        public SetScrollingRegionEvent SetScrollingRegion;
+        public SetCursorStyleEvent SetCursorStyle;
     }
 }

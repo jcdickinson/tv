@@ -139,7 +139,7 @@ namespace TerminalVelocity.Terminal
         MoveBackward = (byte)'D',
         MoveDownAndCr = (byte)'E',
         MoveUpAndCr = (byte)'F',
-        SetTabulationMode = (byte)'g',
+        ClearTabulation = (byte)'g',
         GotoColumn1 = (byte)'G',
         GotoColumn2 = (byte)'`',
         Goto1 = (byte)'H',
@@ -202,10 +202,10 @@ namespace TerminalVelocity.Terminal
 
     internal enum ClearMode : byte
     {
-        Below,
-        Above,
-        All,
-        Saved
+        Below = 0,
+        Above = 1,
+        All = 2,
+        Saved = 3
     }
 
     internal enum CursorStyle : byte
@@ -227,9 +227,9 @@ namespace TerminalVelocity.Terminal
 
     internal enum LineClearMode : byte
     {
-        Right,
-        Left,
-        All,
+        Right = 0,
+        Left = 1,
+        All = 2,
     }
 
     internal enum Mode
@@ -289,5 +289,29 @@ namespace TerminalVelocity.Terminal
     {
         Current = 0,
         All = 3,
+    }
+
+    internal enum TerminalAttribute : byte
+    {
+        Reset = 0,
+        Bold = 1,
+        Dim = 2,
+        Italic = 3,
+        Underscore = 4,
+        BlinkSlow = 5,
+        BlinkFast = 6,
+        Reverse = 7,
+        Hidden = 8,
+        Strike = 9,
+        CancelBold = 21,
+        CancelBoldDim = 22,
+        CancelItalic = 23,
+        CancelUnderline = 24,
+        CancelBlink = 25,
+        CancelReverse = 27,
+        CancelHidden = 28,
+        CancelStrike = 29,
+        SetForeground = 38,
+        SetBackground = 48
     }
 }

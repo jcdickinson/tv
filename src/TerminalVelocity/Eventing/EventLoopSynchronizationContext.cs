@@ -1,8 +1,6 @@
 ﻿using System;
 using System.Collections.Concurrent;
-using System.Diagnostics;
 using System.Threading;
-using System.Threading.Tasks;
 
 namespace TerminalVelocity.Eventing
 {
@@ -10,13 +8,15 @@ namespace TerminalVelocity.Eventing
     {
         private readonly struct SynchronizationEventData : IDisposable
         {
+            public readonly EventLoop EventLoop;
             public readonly ulong Id;
             public readonly SendOrPostCallback Callback;
             public readonly object State;
             public readonly ManualResetEventSlim WaitHandle;
 
-            public SynchronizationEventData(ulong id, SendOrPostCallback callback, object state, bool createWaitHandle)
+            public SynchronizationEventData(EventLoop eventLoop, ulong id, SendOrPostCallback callback, object state, bool createWaitHandle)
             {
+                EventLoop = eventLoop;
                 Id = id;
                 Callback = callback;
                 State = state;
@@ -25,7 +25,10 @@ namespace TerminalVelocity.Eventing
 
             public void Invoke()
             {
+                SynchronizationEventData tmp = this;
+                EventLoop.OnEventExecuting(Id, ref tmp);
                 Callback?.Invoke(State);
+                EventLoop.OnEventExecuted(Id, tmp, EventStatus.Continue);
                 WaitHandle?.Set();
             }
 
@@ -54,7 +57,7 @@ namespace TerminalVelocity.Eventing
         EventStatus IEvent.PublishEvent(ulong eventId)
         {
             while (
-                _events.TryPeek(out SynchronizationEventData publication) && 
+                _events.TryPeek(out SynchronizationEventData publication) &&
                 publication.Id <= eventId)
             {
                 // Only occurs on one thread.
@@ -66,18 +69,27 @@ namespace TerminalVelocity.Eventing
 
         private void PostOrSend(SendOrPostCallback d, object state, bool wait)
         {
-            if (Thread.CurrentThread.ManagedThreadId == ManagedThreadId)
-            {
-                d(state);
-                return;
-            }
-
             var id = (ulong)Interlocked.Increment(ref _idFactory);
-            using (var e = new SynchronizationEventData(id, d, state, wait))
+            var isCurrentThread = _eventLoop.IsOnEventLoopThread;
+     
+            using (var e = new SynchronizationEventData(_eventLoop, id, d, state, wait && !isCurrentThread))
             {
-                _events.Enqueue(e);
-                _eventLoop.Publish(id, this, e);
-                e.WaitHandle?.Wait();
+                SynchronizationEventData tmp = e;
+                _eventLoop.OnEventPublishing(id, ref tmp);
+
+                if (wait && isCurrentThread)
+                {
+                    _eventLoop.OnEventPublished(id, tmp);
+                    _eventLoop.OnEventExecuting(id, ref tmp);
+                    d(state);
+                    _eventLoop.OnEventExecuted(id, tmp, EventStatus.Continue);
+                }
+                else
+                {
+                    _events.Enqueue(e);
+                    _eventLoop.Publish(id, this, e);
+                    e.WaitHandle?.Wait();
+                }
             }
         }
 

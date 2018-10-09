@@ -15,7 +15,7 @@ namespace TerminalVelocity.Preferences
             public void Dispose() => IsDisposed = true;
         }
 
-        [Fact]
+        [Fact, Trait("Category", "Configurable")]
         public static void Configurable_Constant()
         {
             Configurable<int> config = 1337;
@@ -33,7 +33,7 @@ namespace TerminalVelocity.Preferences
             Assert.Throws<ObjectDisposedException>(() => config.Value);
         }
 
-        [Fact]
+        [Fact, Trait("Category", "Configurable")]
         public static void Configurable_Factory()
         {
             var config = new Configurable<int>(() => 1337);
@@ -53,7 +53,7 @@ namespace TerminalVelocity.Preferences
             Assert.True(config.IsDisposed);
         }
 
-        [Fact]
+        [Fact, Trait("Category", "Configurable")]
         public static void Configurable_Disposable()
         {
             var config = new Configurable<DisposableSentinel>(() => new DisposableSentinel(1337));
@@ -75,7 +75,7 @@ namespace TerminalVelocity.Preferences
             Assert.True(value.IsDisposed);
         }
 
-        [Fact]
+        [Fact, Trait("Category", "Configurable")]
         public static void Configurable_Select()
         {
             var i = 1337;
@@ -107,7 +107,7 @@ namespace TerminalVelocity.Preferences
             Assert.True(value3.IsDisposed);
         }
 
-        [Fact]
+        [Fact, Trait("Category", "Configurable")]
         public static void Configurable_Join()
         {
             var i = 1337;

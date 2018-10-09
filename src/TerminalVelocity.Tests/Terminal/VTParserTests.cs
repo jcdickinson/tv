@@ -6,7 +6,7 @@ namespace TerminalVelocity.Terminal
 {
     public static class VTParserTests
     {
-        [Fact]
+        [Fact, Trait("Category", "CSI")]
         public static void VTParser_CSI_Populated()
         {
             var packet = Encoding.ASCII.GetBytes("\x1B[1;1;1;1!#@");
@@ -32,7 +32,7 @@ namespace TerminalVelocity.Terminal
             Assert.Equal(2, dispatched);
         }
 
-        [Fact]
+        [Fact, Trait("Category", "CSI")]
         public static void VTParser_CSI_Empty()
         {
             var packet = Encoding.ASCII.GetBytes("\x1B[@");
@@ -58,7 +58,7 @@ namespace TerminalVelocity.Terminal
             Assert.Equal(2, dispatched);
         }
 
-        [Fact]
+        [Fact, Trait("Category", "CSI")]
         public static void VTParser_CSI_MaxParams_MaxIntermediates()
         {
             var packet = Encoding.ASCII.GetBytes("\x1B[1;1;1;1!#@");
@@ -84,7 +84,7 @@ namespace TerminalVelocity.Terminal
             Assert.Equal(2, dispatched);
         }
 
-        [Fact]
+        [Fact, Trait("Category", "CSI")]
         public static void VTParser_CSI_SemiUnderline()
         {
             var packet = Encoding.ASCII.GetBytes("\x1B[;4m");
@@ -110,7 +110,7 @@ namespace TerminalVelocity.Terminal
             Assert.Equal(2, dispatched);
         }
 
-        [Fact]
+        [Fact, Trait("Category", "CSI")]
         public static void VTParser_CSI_LongParam()
         {
             var packet = Encoding.ASCII.GetBytes("\x1B[9223372036854775808m");
@@ -136,7 +136,7 @@ namespace TerminalVelocity.Terminal
             Assert.Equal(2, dispatched);
         }
 
-        [Fact]
+        [Fact, Trait("Category", "DCS")]
         public static void VTParser_DCS_Hook_Put_Unhook()
         {
             const string PutExpected = " !";
@@ -173,7 +173,7 @@ namespace TerminalVelocity.Terminal
             Assert.Equal(2, unhookDispatched);
         }
 
-        [Fact]
+        [Fact, Trait("Category", "DCS")]
         public static void VTParser_DCS_Hook_Put_Unhook_MaxParams_MaxIntermediates()
         {
             const string PutExpected = " !";
@@ -212,7 +212,7 @@ namespace TerminalVelocity.Terminal
             Assert.Equal(2, unhookDispatched);
         }
 
-        [Fact]
+        [Fact, Trait("Category", "ESC")]
         public static void VTParser_ESC_Populated()
         {
             var packet = Encoding.ASCII.GetBytes("\x1B !0");
@@ -237,7 +237,7 @@ namespace TerminalVelocity.Terminal
             Assert.Equal(2, dispatched);
         }
 
-        [Fact]
+        [Fact, Trait("Category", "ESC")]
         public static void VTParser_ESC_Empty()
         {
             var packet = Encoding.ASCII.GetBytes("\x001B0");
@@ -262,7 +262,7 @@ namespace TerminalVelocity.Terminal
             Assert.Equal(2, dispatched);
         }
 
-        [Fact]
+        [Fact, Trait("Category", "ESC")]
         public static void VTParser_ESC_MaxIntermediates()
         {
             var packet = Encoding.ASCII.GetBytes("\x1B !0");
@@ -287,7 +287,7 @@ namespace TerminalVelocity.Terminal
             Assert.Equal(2, dispatched);
         }
 
-        [Fact]
+        [Fact, Trait("Category", "EXEC")]
         public static void VTParser_Execute()
         {
             var packet = Encoding.ASCII.GetBytes("\x1C");
@@ -310,7 +310,7 @@ namespace TerminalVelocity.Terminal
             Assert.Equal(2, dispatched);
         }
 
-        [Fact]
+        [Fact, Trait("Category", "OSC")]
         public static void VTParser_OSC_Populated()
         {
             var packet = Encoding.ASCII.GetBytes("\x1B]2;jwilm@jwilm-desk: ~/code/alacritty\x07");
@@ -335,7 +335,7 @@ namespace TerminalVelocity.Terminal
             Assert.Equal(2, dispatched);
         }
 
-        [Fact]
+        [Fact, Trait("Category", "OSC")]
         public static void VTParser_OSC_Empty()
         {
             var packet = Encoding.ASCII.GetBytes("\x1B]\x07");
@@ -360,7 +360,7 @@ namespace TerminalVelocity.Terminal
             Assert.Equal(2, dispatched);
         }
 
-        [Fact]
+        [Fact, Trait("Category", "OSC")]
         public static void VTParser_OSC_MaxParams()
         {
             var packet = Encoding.ASCII.GetBytes("\x1B];;;;;;;;;;;;;;;;;\x07");
@@ -384,7 +384,7 @@ namespace TerminalVelocity.Terminal
             Assert.Equal(2, dispatched);
         }
 
-        [Fact]
+        [Fact, Trait("Category", "OSC")]
         public static void VTParser_OSC_UTF8()
         {
             var packet = Encoding.UTF8.GetBytes("\x1B]2;echo '¯\\_(ツ)_/¯' && sleep 1\x07");
@@ -410,7 +410,7 @@ namespace TerminalVelocity.Terminal
             Assert.Equal(2, dispatched);
         }
 
-        [Fact]
+        [Fact, Trait("Category", "OSC")]
         public static void VTParser_Print_UTF8()
         {
             const string Case = "Hello 😁 world ";

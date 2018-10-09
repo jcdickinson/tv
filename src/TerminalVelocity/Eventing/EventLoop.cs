@@ -55,10 +55,13 @@ namespace TerminalVelocity.Eventing
             // Make sure finally runs.
             using (_cancellationToken)
             {
-                OnEventPublished(0, new DisposeEvent());
+                var dispose = new DisposeEvent();
+                OnEventPublishing(0, ref dispose);
                 _cancellationToken.Cancel();
-                OnEventPublished(0, new DisposeEvent());
+                OnEventPublished(0, dispose);
+                OnEventExecuting(0, ref dispose);
                 Dispose(true);
+                OnEventExecuted(0, dispose, EventStatus.Halt);
             }
         }
 
@@ -75,11 +78,11 @@ namespace TerminalVelocity.Eventing
             OnEventPublished(id, e);
         }
 
-        protected internal virtual bool OnEventPublishing<TEvent>(ulong eventId, ref TEvent e)
-            where TEvent : struct
+        protected internal virtual bool OnEventPublishing<T>(ulong eventId, ref T e)
+            where T : struct
             => true;
 
-        protected abstract void OnEventPublished<T>(ulong eventId, in T e)
+        protected internal abstract void OnEventPublished<T>(ulong eventId, in T e)
             where T : struct;
 
         protected internal virtual void OnEventExecuting<T>(ulong eventId, ref T e)

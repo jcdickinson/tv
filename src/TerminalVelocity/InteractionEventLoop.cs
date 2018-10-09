@@ -20,7 +20,7 @@ namespace TerminalVelocity
             };
         }
 
-        protected override void OnEventPublished<T>(ulong eventId, in T e) => _eventReceived.Set();
+        protected internal override void OnEventPublished<T>(ulong eventId, in T e) => _eventReceived.Set();
 
         protected override void Dispose(bool disposing)
         {

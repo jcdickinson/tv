@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Diagnostics.CodeAnalysis;
 using System.Linq;
 using System.Linq.Expressions;
 using System.Reflection;
@@ -8,6 +9,7 @@ using TerminalVelocity.Plugins;
 
 namespace TerminalVelocity
 {
+    [ExcludeFromCodeCoverage]
     public static class Setup
     {
         private static readonly Type ObjectType;
@@ -31,7 +33,6 @@ namespace TerminalVelocity
                 where parameters.Length == 0 && args.Length == 1
                 select method
             ).First();
-
         }
 
         public static void SetupContainer(Container container)

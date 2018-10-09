@@ -28,7 +28,7 @@ namespace TerminalVelocity.Direct2D
 
         private static void Enumerate<T>(IEnumerable<T> enumerable)
         {
-            foreach (T item in enumerable) ;
+            foreach (T item in enumerable) { }
         }
     }
 }
