@@ -1,0 +1,69 @@
+version: 'build-{build}'
+
+image: Visual Studio 2017
+
+pull_requests:
+  do_not_increment_build_number: true
+
+clone_depth: 1
+
+nuget:
+  disable_publish_on_pr: true
+
+environment:
+  DOTNET_CLI_TELEMETRY_OPTOUT: 1
+
+configuration:
+- Release
+
+platform: Any CPU
+
+init:
+- cmd: git config --global core.autocrlf true
+- ps: $Env:APP_VERSION = "0.0.1-preview1-" + $Env:APPVEYOR_BUILD_NUMBER.PadLeft(5, "0")
+- ps: if(-not $env:APPVEYOR_PULL_REQUEST_NUMBER) { $env:is_not_pr = "true"; }
+
+install:
+- pip install codecov 
+
+dotnet_csproj:
+  patch: true
+  file: '**\*.csproj'
+  version: $(app_version)
+  package_version: $(app_version)
+  
+before_build:
+- appveyor-retry dotnet restore -v Minimal
+
+build:
+ project: TerminalVelocity.sln
+ verbosity: minimal
+ 
+test_script:
+- ps: .\GenerateTestSolution.ps1 .\TerminalVelocity.sln
+- >-
+    dotnet
+    test
+    TerminalVelocity.Tests.sln
+    -c %CONFIGURATION%
+    --no-build
+    /p:CollectCoverage=true
+    /p:CoverletOutputFormat=opencover
+    /p:CoverletOutput=./coverage.xml
+
+after_test:
+- >-
+    codecov 
+    -X gcov 
+    -f "%APPVEYOR_BUILD_FOLDER%\coverage.xml"
+
+# AppVeyor can't publish: https://github.com/appveyor/ci/issues/1404
+before_package:
+- dotnet publish src\TerminalVelocity.Direct2D\TerminalVelocity.Direct2D.csproj -c %CONFIGURATION% -o .\publish
+  7z a tv.zip %APPVEYOR_BUILD_FOLDER%\publish\**
+
+artifacts:
+  - path: 'tv.zip'
+  - path: 'coverage.xml'
+
+
