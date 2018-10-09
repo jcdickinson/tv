@@ -59,7 +59,7 @@ after_test:
 
 # AppVeyor can't publish: https://github.com/appveyor/ci/issues/1404
 before_package:
-- dotnet publish src\TerminalVelocity.Direct2D\TerminalVelocity.Direct2D.csproj -c %CONFIGURATION% -o .\publish
+- dotnet publish src\TerminalVelocity.Direct2D\TerminalVelocity.Direct2D.csproj -c %CONFIGURATION% -o ..\..\publish
 - 7z a tv.zip %APPVEYOR_BUILD_FOLDER%\publish\**
 
 artifacts:
