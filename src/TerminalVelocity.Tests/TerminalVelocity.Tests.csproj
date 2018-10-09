@@ -13,6 +13,9 @@
     <DotNetCliToolReference Include="dotnet-xunit" Version="2.3.1" />
   </ItemGroup>
   <ItemGroup>
+    <None Include="Terminal\AnsiParserEvents.cs" />
+  </ItemGroup>
+  <ItemGroup>
     <ProjectReference Include="..\TerminalVelocity\TerminalVelocity.csproj" />
   </ItemGroup>
 </Project>

@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Linq.Expressions;
 
-namespace TerminalVelocity.VT
+namespace TerminalVelocity.Terminal
 {
     // https://github.com/jwilm/vte/blob/master/src/table.rs.in
 

@@ -8,16 +8,6 @@
     <AssemblyName>tv</AssemblyName>
   </PropertyGroup>
   <ItemGroup>
-    <Compile Remove="BrushProvider.cs" />
-    <Compile Remove="FontProvider.cs" />
-    <Compile Remove="SceneRoot.cs" />
-  </ItemGroup>
-  <ItemGroup>
-    <None Include="BrushProvider.cs" />
-    <None Include="FontProvider.cs" />
-    <None Include="SceneRoot.cs" />
-  </ItemGroup>
-  <ItemGroup>
     <PackageReference Include="SharpDX.Direct2D1" Version="4.2.0" />
     <PackageReference Include="SharpDX.Direct3D11" Version="4.2.0" />
     <PackageReference Include="SharpDX.DirectComposition" Version="4.2.0" />

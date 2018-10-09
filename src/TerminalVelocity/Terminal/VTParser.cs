@@ -1,43 +1,11 @@
 ﻿using System;
-using TerminalVelocity.Eventing;
-using TerminalVelocity.Pty.Events;
-using TerminalVelocity.VT.Events;
+using System.Runtime.CompilerServices;
+using System.Runtime.InteropServices;
+using System.Text;
 
-namespace TerminalVelocity.VT
+namespace TerminalVelocity.Terminal
 {
-    // https://github.com/jwilm/vte/blob/master/src/lib.rs
-
-    public sealed class ParserOptions
-    {
-        private int _maxIntermediates = 2;
-        private int _maxOsCommandRaw = 1024;
-        private int _maxParameters = 16;
-
-        public int MaxIntermediates
-        {
-            get => _maxIntermediates;
-            set => _maxIntermediates = value > 0 ? value : throw new ArgumentOutOfRangeException(nameof(value));
-        }
-
-        public int MaxOsCommandRaw
-        {
-            get => _maxOsCommandRaw;
-            set => _maxOsCommandRaw = value > 0 ? value : throw new ArgumentOutOfRangeException(nameof(value));
-        }
-
-        public int MaxParameters
-        {
-            get => _maxParameters;
-            set => _maxParameters = value > 0 ? value : throw new ArgumentOutOfRangeException(nameof(value));
-        }
-
-        public ParserOptions()
-        {
-
-        }
-    }
-
-    public sealed class Parser
+    internal partial struct VTParser
     {
         [Flags]
         private enum ParseOptions : byte
@@ -49,21 +17,11 @@ namespace TerminalVelocity.VT
             Ignoring = IgnoringIntermediates | IgnoringParameters
         }
 
-        private readonly ControlSequenceEvent _controlSequenceEvent;
-        private readonly EscapeSequenceEvent _escapeSequenceEvent;
-        private readonly ExecuteEvent _executeEvent;
-        private readonly HookEvent _hookEvent;
-        private readonly OsCommandEvent _osCommandEvent;
-        private readonly PrintEvent _printEvent;
-        private readonly PutEvent _putEvent;
-        private readonly UnhookEvent _unhookEvent;
-
         private ParserState _state;
         private readonly byte[] _intermediates;
         private readonly long[] _params;
         private readonly ReadOnlyMemory<byte>[] _oscParams;
         private readonly byte[] _oscRaw;
-        private readonly ParserUtf8 _utf8;
 
         private ParseOptions _options;
         private int _intermediateIndex;
@@ -73,45 +31,42 @@ namespace TerminalVelocity.VT
         private int _previousOscEnd;
         private int _oscNumParams;
 
-        public Parser(
-            ParserOptions options = null,
-            ReceiveEvent onReceiveEvent = null,
+        private readonly VTParserEvents _events;
+        private readonly CharacterParser.CharacterEvent _utf8;
+        private readonly CharacterParser.CharacterEvent _ascii;
 
-            ControlSequenceEvent controlSequenceEvent = null,
-            EscapeSequenceEvent escapeSequenceEvent = null,
-            ExecuteEvent executeEvent = null,
-            HookEvent hookEvent = null,
-            OsCommandEvent osCommandEvent = null,
-            PrintEvent printEvent = null,
-            PutEvent putEvent = null,
-            UnhookEvent unhookEvent = null)
+        public VTParser(
+            int maxIntermediates = 2,
+            int maxParameters = 16,
+            int maxOsCommandRaw = 1024,
+            VTParserEvents events = default,
+            CharacterParser.CharacterEvent utf8 = default,
+            CharacterParser.CharacterEvent ascii = default)
         {
-            _controlSequenceEvent = controlSequenceEvent;
-            _escapeSequenceEvent = escapeSequenceEvent;
-            _executeEvent = executeEvent;
-            _hookEvent = hookEvent;
-            _osCommandEvent = osCommandEvent;
-            _printEvent = printEvent;
-            _putEvent = putEvent;
-            _unhookEvent = unhookEvent;
 
             _state = ParserState.Ground;
-            _intermediates = new byte[options?.MaxIntermediates ?? 2];
-            _params = new long[options?.MaxParameters ?? 16];
-            _oscRaw = new byte[options?.MaxOsCommandRaw ?? 1024];
-            _oscParams = new ReadOnlyMemory<byte>[options?.MaxParameters ?? 16];
+            _intermediates = new byte[maxIntermediates];
+            _params = new long[maxParameters];
+            _oscRaw = new byte[maxOsCommandRaw];
+            _oscParams = new ReadOnlyMemory<byte>[maxParameters];
 
-            _utf8 = new ParserUtf8(true);
+            _options = default;
+            _intermediateIndex = default;
+            _param = default;
+            _numParams = default;
+            _oscIndex = default;
+            _previousOscEnd = default;
+            _oscNumParams = default;
 
-            onReceiveEvent?.Subscribe(OnReceiveEvent);
+            _events = events;
+            _utf8 = utf8;
+            _ascii = ascii;
         }
 
-        public EventStatus OnReceiveEvent(in ReceiveEventData receive)
+        public void Process(ReadOnlySpan<byte> next)
         {
-            ReadOnlySpan<byte> next = receive.Data.Span;
             for (var i = 0; i < next.Length; i++)
                 Process(next[i]);
-            return EventStatus.Continue;
         }
 
         private void Process(byte next)
@@ -133,10 +88,11 @@ namespace TerminalVelocity.VT
 
         private void ProcessUtf8(byte next)
         {
-            if (!_utf8.Process(next, out ReadOnlyMemory<char> result))
+            ReadOnlySpan<byte> span = MemoryMarshal.CreateReadOnlySpan(ref next, 1);
+            if (!_utf8(span, out ReadOnlySpan<char> result))
                 return;
 
-            _printEvent?.Publish(new PrintEventData(result));
+            _events.Print?.Invoke(result);
             _state = ParserState.Ground;
         }
 
@@ -165,26 +121,28 @@ namespace TerminalVelocity.VT
             switch (action)
             {
                 case ParserAction.Print:
-                    _printEvent?.Publish(new PrintEventData(_utf8.Provide(next)));
+                    ReadOnlySpan<byte> span = MemoryMarshal.CreateReadOnlySpan(ref next, 1);
+                    if (_ascii(span, out ReadOnlySpan<char> characters))
+                        _events.Print?.Invoke(characters);
                     return;
                 case ParserAction.Execute:
-                    _executeEvent?.Publish(new ExecuteEventData((ControlCode)next));
+                    _events.Execute?.Invoke((ControlCode)next);
                     return;
                 case ParserAction.Hook:
                     if (_options.HasFlag(ParseOptions.CollectingParameters))
                         _params[_numParams++] = _param;
 
-                    _hookEvent?.Publish(new HookEventData(
-                        _params.AsMemory(0, _numParams),
-                        _intermediates.AsMemory(0, _intermediateIndex),
-                        (IgnoredData)(byte)(_options & ParseOptions.Ignoring)));
+                    _events.Hook?.Invoke(
+                        _intermediates.AsSpan(0, _intermediateIndex),
+                        _params.AsSpan(0, _numParams),
+                        (IgnoredData)(byte)(_options & ParseOptions.Ignoring));
 
                     _numParams = 0;
                     _param = 0;
                     _options &= ~ParseOptions.CollectingParameters;
                     return;
                 case ParserAction.Put:
-                    _putEvent?.Publish(new PutEventData(next));
+                    _events.Put?.Invoke(next);
                     return;
                 case ParserAction.OscStart:
                     _oscIndex = 0;
@@ -232,34 +190,41 @@ namespace TerminalVelocity.VT
                             ? (ReadOnlyMemory<byte>)_oscRaw.AsMemory(0, _oscIndex)
                             : (ReadOnlyMemory<byte>)_oscRaw.AsMemory(_previousOscEnd, _oscIndex - _previousOscEnd);
 
-                    _osCommandEvent?.Publish(new OsCommandEventData(
-                        _oscParams.AsMemory(0, _oscNumParams),
-                        (IgnoredData)(byte)(_options & ParseOptions.Ignoring)));
+                    ReadOnlySpan<ReadOnlyMemory<byte>> param = _oscParams.AsSpan(0, _oscNumParams);
+                    OsCommand command = OsCommand.Unknown;
+                    if (param.Length > 0 && TryParseInt16(param[0].Span, out short commandIndex))
+                    {
+                        command = (OsCommand)commandIndex;
+                        param = param.Slice(1);
+                    }
+
+                    _events.OsCommand?.Invoke(
+                        command,
+                        param,
+                        (IgnoredData)(byte)(_options & ParseOptions.Ignoring));
                     return;
                 case ParserAction.Unhook:
-                    _unhookEvent?.Publish(default);
+                    _events.Unhook?.Invoke();
                     return;
                 case ParserAction.CsiDispatch:
                     if (_options.HasFlag(ParseOptions.CollectingParameters))
                         _params[_numParams++] = _param;
 
-                    _controlSequenceEvent?.Publish(new ControlSequenceEventData(
-                        _intermediates.AsMemory(0, _intermediateIndex),
-                        _params.AsMemory(0, _numParams),
-                        (IgnoredData)(byte)(_options & ParseOptions.Ignoring),
-                        (char)next
-                    ));
+                    _events.ControlSequence?.Invoke(
+                        (ControlSequenceCommand)next,
+                        _intermediates.AsSpan(0, _intermediateIndex),
+                        _params.AsSpan(0, _numParams),
+                        (IgnoredData)(byte)(_options & ParseOptions.Ignoring));
 
                     _numParams = 0;
                     _param = 0;
                     _options &= ~ParseOptions.CollectingParameters;
                     return;
                 case ParserAction.EscDispatch:
-                    _escapeSequenceEvent?.Publish(new EscapeSequenceEventData(
+                    _events.EscapeSequence?.Invoke(
                         (EscapeCommand)next,
-                        _intermediates.AsMemory(0, _intermediateIndex),
-                        (IgnoredData)(byte)(_options & ParseOptions.Ignoring)
-                    ));
+                        _intermediates.AsSpan(0, _intermediateIndex),
+                        (IgnoredData)(byte)(_options & ParseOptions.Ignoring));
                     return;
                 case ParserAction.Ignore:
                 case ParserAction.None:
@@ -309,6 +274,24 @@ namespace TerminalVelocity.VT
                 : a >= 0 && na < 0
                     ? long.MaxValue
                     : na;
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private static bool TryParseInt16(ReadOnlySpan<byte> raw, out short result)
+        {
+            result = 0;
+            if (raw.Length == 0) return false;
+
+            for (var i = 0; i < raw.Length; i++)
+            {
+                result = (short)((result * 10) + (raw[i] - (byte)'0'));
+                if (result < 0)
+                {
+                    result = 0;
+                    return false;
+                }
+            }
+            return true;
         }
     }
 }

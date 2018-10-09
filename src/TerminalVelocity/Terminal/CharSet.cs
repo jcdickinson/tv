@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Runtime.InteropServices;
 
-namespace TerminalVelocity.Emulator
+namespace TerminalVelocity.Terminal
 {
     [StructLayout(LayoutKind.Explicit, Size = Length)]
     public struct CharSet

@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Runtime.InteropServices;
 
-namespace TerminalVelocity.VT
+namespace TerminalVelocity.Terminal
 {
     [StructLayout(LayoutKind.Sequential, Pack = 1)]
     internal readonly struct ParserStateAction
