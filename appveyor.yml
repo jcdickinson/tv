@@ -76,6 +76,4 @@ before_package:
 
 artifacts:
   - path: 'tv.zip'
-  - path: 'coverage.xml'
-
-
+  
