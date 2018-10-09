@@ -45,7 +45,7 @@ namespace TerminalVelocity.Direct2D.DirectX
         protected override void OnEventPublished<T>(ulong eventId, in T e)
         {
             _render.EventPublished<T>(eventId);
-            _render.EventPublished<T>(eventId);
+            _resize.EventPublished<T>(eventId);
             _eventReceived.Set();
         }
 
@@ -60,7 +60,7 @@ namespace TerminalVelocity.Direct2D.DirectX
                 _eventReceived.WaitOne();
 
                 _render.FreezeLatest();
-                _render.FreezeLatest();
+                _resize.FreezeLatest();
 
                 if (!_directX.IsDisposing)
                     ExecuteEvents();
@@ -73,7 +73,7 @@ namespace TerminalVelocity.Direct2D.DirectX
             {
                 _directX.Initialize(this, create.Hwnd, create.Size);
                 _render.FreezeLatest();
-                _render.FreezeLatest();
+                _resize.FreezeLatest();
 
                 base.OnEventExecuting(eventId, ref e);
             }
