@@ -49,7 +49,7 @@ test_script:
     --no-build
     /p:CollectCoverage=true
     /p:CoverletOutputFormat=opencover
-    /p:CoverletOutput=./coverage.xml
+    "/p:CoverletOutput=%APPVEYOR_BUILD_FOLDER%/coverage.xml"
 
 after_test:
 - >-
