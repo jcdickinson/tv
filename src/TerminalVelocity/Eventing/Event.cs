@@ -70,6 +70,7 @@ namespace TerminalVelocity.Eventing
         private readonly ReaderWriterLockSlim _subscribersLock;
         public string Name { get; }
         private long _idFactory = 1;
+        private bool _isDisposed;
 
         private Event()
         {
@@ -99,7 +100,7 @@ namespace TerminalVelocity.Eventing
             {
                 PublishEvent(data);
             }
-            else if (_eventLoop.OnEventPublishing((ulong)id, ref data))
+            else if (_eventLoop.OnEventPublishing(id, ref data))
             {
                 _events.Enqueue(new EventPublication(id, data));
                 _eventLoop.Publish(id, this, data);
@@ -108,6 +109,7 @@ namespace TerminalVelocity.Eventing
 
         public void Dispose()
         {
+            _isDisposed = true;
             _subscribersLock.Dispose();
             _subscribers.Clear();
         }
@@ -150,12 +152,14 @@ namespace TerminalVelocity.Eventing
             {
                 // Only occurs on one thread.
                 _events.TryDequeue(out publication);
-
-                //Debug.WriteLine(publication.Data.ToString(), Name);
+                
                 TEvent data = publication.Data;
-                _eventLoop?.OnEventExecuting(publication.Id, ref data);
-                EventStatus status = PublishEvent(publication.Data);
-                _eventLoop?.OnEventExecuted(publication.Id, data, status);
+                EventStatus status = EventStatus.Continue;
+                if (_eventLoop?.OnEventExecuting(publication.Id, ref data) ?? true)
+                {
+                    status = PublishEvent(publication.Data);
+                    _eventLoop?.OnEventExecuted(publication.Id, data, status);
+                }
 
                 if (status == EventStatus.Halt)
                     return EventStatus.Halt;
@@ -166,6 +170,7 @@ namespace TerminalVelocity.Eventing
 
         private EventStatus PublishEvent(in TEvent e)
         {
+            if (_isDisposed) return EventStatus.Halt;
             try
             {
                 _subscribersLock.EnterUpgradeableReadLock();
@@ -176,9 +181,11 @@ namespace TerminalVelocity.Eventing
                 }
                 return EventStatus.Continue;
             }
+            catch (ObjectDisposedException) { return EventStatus.Halt; }
             finally
             {
-                _subscribersLock.ExitUpgradeableReadLock();
+                if (!_isDisposed)
+                    _subscribersLock.ExitUpgradeableReadLock();
             }
         }
 

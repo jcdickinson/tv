@@ -23,7 +23,7 @@ namespace TerminalVelocity.Eventing
         }
 
         public Action<ulong, object, EventStatus> EventExecuted;
-        public Action<ulong, object> EventExecuting;
+        public Func<ulong, object, bool> EventExecuting;
         public Func<ulong, object, bool> EventPublishing;
         public Action<ulong, object> EventPublished;
 
@@ -49,10 +49,11 @@ namespace TerminalVelocity.Eventing
             base.OnEventExecuted(eventId, e, eventStatus);
         }
 
-        protected internal override void OnEventExecuting<T>(ulong eventId, ref T e)
+        protected internal override bool OnEventExecuting<T>(ulong eventId, ref T e)
         {
-            EventExecuting?.Invoke(eventId, e);
-            base.OnEventExecuting(eventId, ref e);
+            if (!(EventExecuting?.Invoke(eventId, e) ?? true))
+                return false;
+            return base.OnEventExecuting(eventId, ref e);
         }
 
         protected internal override bool OnEventPublishing<T>(ulong eventId, ref T e)

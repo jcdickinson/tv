@@ -46,10 +46,15 @@ namespace TerminalVelocity.Direct2D.DirectX
             }
         }
 
-        protected override void OnEventPublished<T>(ulong eventId, in T e)
+        protected override bool OnEventPublishing<T>(ulong eventId, ref T e)
         {
             _render.EventPublished<T>(eventId);
             _resize.EventPublished<T>(eventId);
+            return base.OnEventPublishing(eventId, ref e);
+        }
+
+        protected override void OnEventPublished<T>(ulong eventId, in T e)
+        {
             _eventReceived.Set();
         }
 
@@ -71,7 +76,7 @@ namespace TerminalVelocity.Direct2D.DirectX
             }
         }
 
-        protected override void OnEventExecuting<T>(ulong eventId, ref T e)
+        protected override bool OnEventExecuting<T>(ulong eventId, ref T e)
         {
             if (e is InitializeEventData create)
             {
@@ -79,7 +84,7 @@ namespace TerminalVelocity.Direct2D.DirectX
                 _render.FreezeLatest();
                 _resize.FreezeLatest();
 
-                base.OnEventExecuting(eventId, ref e);
+                return base.OnEventExecuting(eventId, ref e);
             }
             else if (_directX.IsInitialized && !_directX.IsDisposing)
             {
@@ -87,16 +92,18 @@ namespace TerminalVelocity.Direct2D.DirectX
                 {
                     _directX.Resize(resize.Size);
                     _render.FreezeLatest();
+                    return base.OnEventExecuting(eventId, ref e);
                 }
                 else if (_render.ShouldExecuteEvent(eventId, e, out RenderEventData render))
                 {
                     _directX.BeginDraw();
+                    return base.OnEventExecuting(eventId, ref e);
                 }
-                base.OnEventExecuting(eventId, ref e);
+                return false;
             }
             else
             {
-                base.OnEventExecuting(eventId, ref e);
+                return base.OnEventExecuting(eventId, ref e);
             }
         }
 

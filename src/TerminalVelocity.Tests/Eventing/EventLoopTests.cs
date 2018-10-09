@@ -37,6 +37,7 @@ namespace TerminalVelocity.Eventing
                     ++executingDispatched;
                     TestingEventData te = Assert.IsType<TestingEventData>(e);
                     Assert.Equal(123, te.Value);
+                    return true;
                 },
                 EventExecuted = (id, e, status) =>
                 {
@@ -100,6 +101,7 @@ namespace TerminalVelocity.Eventing
                 {
                     ++executingDispatched;
                     Assert.False(true);
+                    return true;
                 },
                 EventExecuted = (id, e, status) =>
                 {
@@ -163,6 +165,7 @@ namespace TerminalVelocity.Eventing
                     ++executingDispatched;
                     TestingEventData te = Assert.IsType<TestingEventData>(e);
                     Assert.Equal(123, te.Value);
+                    return true;
                 },
                 EventExecuted = (id, e, status) =>
                 {
@@ -223,6 +226,7 @@ namespace TerminalVelocity.Eventing
             {
                 ++executingDispatched;
                 loop.IsDisposeEvent(e);
+                return true;
             };
             loop.EventExecuted = (id, e, status) =>
             {

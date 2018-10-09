@@ -8,8 +8,16 @@ namespace TerminalVelocity.Eventing
 {
     public struct EventLimiter<T>
     {
+        private readonly EventLimiterPolicy _policy;
         private long _latestEventId;
         private long _currentEventId;
+
+        public EventLimiter(EventLimiterPolicy policy)
+        {
+            _policy = policy;
+            _latestEventId = default;
+            _currentEventId = default;
+        }
 
         public bool EventPublished<TActual>(ulong eventId)
         {
@@ -26,8 +34,12 @@ namespace TerminalVelocity.Eventing
 
         public bool ShouldExecuteEvent<TActual>(ulong eventId, in TActual actual, out T expected)
         {
-            if (Interlocked.Read(ref _currentEventId) == (long)eventId &&
-                actual is T)
+            var current = (ulong)Interlocked.Read(ref _currentEventId);
+            var match = _policy == EventLimiterPolicy.LatestOnly
+                ? eventId == current
+                : eventId <= current;
+
+            if (match && actual is T)
             {
                 expected = (T)(object)actual;
                 return true;

@@ -30,6 +30,7 @@ namespace TerminalVelocity.Eventing
         private readonly ConcurrentQueue<EventPublication> _events;
         private readonly CancellationTokenSource _cancellationToken;
         private EventLoopSynchronizationContext _synchronizationContext;
+        private EventLimiter<EventPublication> _eventLimiter;
 
         public abstract int Priority { get; }
         protected bool IsRunning => !_cancellationToken.IsCancellationRequested;
@@ -44,6 +45,7 @@ namespace TerminalVelocity.Eventing
         {
             _events = new ConcurrentQueue<EventPublication>();
             _cancellationToken = new CancellationTokenSource();
+            _eventLimiter = new EventLimiter<EventPublication>(EventLimiterPolicy.UpToLatest);
         }
 
         protected void CreateSynchronizationContext()
@@ -79,6 +81,7 @@ namespace TerminalVelocity.Eventing
             where TPayload : struct
         {
             _events.Enqueue(new EventPublication(id, @event));
+            _eventLimiter.EventPublished<EventPublication>(id);
             OnEventPublished(id, e);
         }
 
@@ -89,9 +92,9 @@ namespace TerminalVelocity.Eventing
         protected internal abstract void OnEventPublished<T>(ulong eventId, in T e)
             where T : struct;
 
-        protected internal virtual void OnEventExecuting<T>(ulong eventId, ref T e)
+        protected internal virtual bool OnEventExecuting<T>(ulong eventId, ref T e)
             where T : struct
-        { }
+            => true;
 
         protected internal virtual void OnEventExecuted<T>(ulong eventId, in T e, EventStatus eventStatus)
             where T : struct
@@ -99,7 +102,11 @@ namespace TerminalVelocity.Eventing
 
         protected void ExecuteEvents()
         {
-            while (_events.TryDequeue(out EventPublication @event))
+            _eventLimiter.FreezeLatest();
+
+            while (_events.TryPeek(out EventPublication @event) &&
+                    _eventLimiter.ShouldExecuteEvent(@event.Id, @event, out @event) &&
+                    _events.TryDequeue(out @event))
                 @event.Event.PublishEvent(@event.Id);
         }
     }

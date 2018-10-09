@@ -32,6 +32,7 @@ namespace TerminalVelocity.Eventing
                 EventExecuting = (id, e) =>
                 {
                     ++executingDispatched;
+                    return true;
                 },
                 EventExecuted = (id, e, status) =>
                 {
@@ -87,6 +88,7 @@ namespace TerminalVelocity.Eventing
                 EventExecuting = (id, e) =>
                 {
                     ++executingDispatched;
+                    return true;
                 },
                 EventExecuted = (id, e, status) =>
                 {
@@ -163,6 +165,7 @@ namespace TerminalVelocity.Eventing
                 EventExecuting = (id, e) =>
                 {
                     ++executingDispatched;
+                    return true;
                 },
                 EventExecuted = (id, e, status) =>
                 {
@@ -218,6 +221,7 @@ namespace TerminalVelocity.Eventing
                 EventExecuting = (id, e) =>
                 {
                     ++executingDispatched;
+                    return true;
                 },
                 EventExecuted = (id, e, status) =>
                 {
