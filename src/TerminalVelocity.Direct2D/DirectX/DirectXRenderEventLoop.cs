@@ -14,11 +14,8 @@ namespace TerminalVelocity.Direct2D.DirectX
         private readonly Thread _renderThread;
         private readonly Surface _directX;
 
-        private long _latestRender;
-        private long _latestResize;
-
-        private long _currentRender;
-        private long _currentResize;
+        private EventLimiter<RenderEventData> _render;
+        private EventLimiter<ResizeEventData> _resize;
 
         public DirectXRenderEventLoop(Surface directX)
         {
@@ -47,9 +44,8 @@ namespace TerminalVelocity.Direct2D.DirectX
 
         protected override void OnEventPublished<T>(ulong eventId, in T e)
         {
-            if (e is RenderEventData) Interlocked.Exchange(ref _latestRender, (long)eventId);
-            if (e is ResizeEventData) Interlocked.Exchange(ref _latestResize, (long)eventId);
-
+            _render.EventPublished<T>(eventId);
+            _render.EventPublished<T>(eventId);
             _eventReceived.Set();
         }
 
@@ -63,8 +59,8 @@ namespace TerminalVelocity.Direct2D.DirectX
             {
                 _eventReceived.WaitOne();
 
-                _currentRender = Interlocked.Read(ref _latestRender);
-                _currentResize = Interlocked.Read(ref _latestResize);
+                _render.FreezeLatest();
+                _render.FreezeLatest();
 
                 if (!_directX.IsDisposing)
                     ExecuteEvents();
@@ -76,19 +72,19 @@ namespace TerminalVelocity.Direct2D.DirectX
             if (e is InitializeEventData create)
             {
                 _directX.Initialize(this, create.Hwnd, create.Size);
-                _currentRender = Interlocked.Read(ref _latestRender);
-                _currentResize = Interlocked.Read(ref _latestResize);
+                _render.FreezeLatest();
+                _render.FreezeLatest();
 
                 base.OnEventExecuting(eventId, ref e);
             }
             else if (_directX.IsInitialized && !_directX.IsDisposing)
             {
-                if (e is ResizeEventData resize && eventId == (ulong)_currentResize)
+                if (_resize.ShouldExecuteEvent(eventId, e, out ResizeEventData resize))
                 {
                     _directX.Resize(resize.Size);
-                    _currentRender = Interlocked.Read(ref _latestRender);
+                    _render.FreezeLatest();
                 }
-                else if (e is RenderEventData render && eventId == (ulong)_currentRender)
+                else if (_render.ShouldExecuteEvent(eventId, e, out RenderEventData render))
                 {
                     _directX.BeginDraw();
                 }
@@ -104,7 +100,7 @@ namespace TerminalVelocity.Direct2D.DirectX
         {
             base.OnEventExecuted(eventId, e, eventStatus);
             if (_directX.IsInitialized && !_directX.IsDisposing &&
-                e is RenderEventData render && eventId == (ulong)_currentRender)
+                _render.ShouldExecuteEvent(eventId, e, out RenderEventData render))
                 _directX.EndDraw();
         }
     }
