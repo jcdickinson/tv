@@ -10,11 +10,11 @@ function Unzip
 
 Unzip "$PSScriptRoot\winpty.zip" "$PSScriptRoot\tmp\winpty\"
 
-New-Item -ItemType Directory -Force -Path publish\winpty\x86
-New-Item -ItemType Directory -Force -Path publish\winpty\x64
+New-Item -ItemType Directory -Force -Path src\TerminalVelocity.WinPty\winpty\x86
+New-Item -ItemType Directory -Force -Path src\TerminalVelocity.WinPty\winpty\x64
 
-Copy-Item -Recurse -Force tmp\winpty\ia32\bin\* publish\winpty\x86
-Copy-Item -Recurse -Force tmp\winpty\x64\bin\* publish\winpty\x64
+Copy-Item -Recurse -Force tmp\winpty\ia32\bin\* src\TerminalVelocity.WinPty\winpty\x86
+Copy-Item -Recurse -Force tmp\winpty\x64\bin\* src\TerminalVelocity.WinPty\winpty\x64
 
 Remove-Item -Recurse -Force -Path tmp\
 Remove-Item -Recurse -Force -Path winpty.zip

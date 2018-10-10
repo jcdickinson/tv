@@ -6,6 +6,15 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <Content Include="winpty/**">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+      <CopyToPublishDirectory>Always</CopyToPublishDirectory>
+      <Visible>False</Visible>
+      <IsAssembly>False</IsAssembly>
+    </Content>
+  </ItemGroup>
+
+  <ItemGroup>
     <ProjectReference Include="..\TerminalVelocity\TerminalVelocity.csproj" />
   </ItemGroup>
   
