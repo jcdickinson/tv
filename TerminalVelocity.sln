@@ -14,6 +14,10 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = ".settings", ".settings", "{
 		.editorconfig = .editorconfig
 	EndProjectSection
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TerminalVelocity.WinPty", "src\TerminalVelocity.WinPty\TerminalVelocity.WinPty.csproj", "{7BD07129-3E49-4868-9EB1-76FF4F69FC55}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TerminalVelocity.WinPty.Tests", "src\TerminalVelocity.WinPty.Tests\TerminalVelocity.WinPty.Tests.csproj", "{D5188606-2FC8-4AD9-9141-E8EC19FE79EC}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -32,6 +36,14 @@ Global
 		{27BD4E98-C4FC-48C8-AC3C-BCBE459D8BB6}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{27BD4E98-C4FC-48C8-AC3C-BCBE459D8BB6}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{27BD4E98-C4FC-48C8-AC3C-BCBE459D8BB6}.Release|Any CPU.Build.0 = Release|Any CPU
+		{7BD07129-3E49-4868-9EB1-76FF4F69FC55}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{7BD07129-3E49-4868-9EB1-76FF4F69FC55}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{7BD07129-3E49-4868-9EB1-76FF4F69FC55}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{7BD07129-3E49-4868-9EB1-76FF4F69FC55}.Release|Any CPU.Build.0 = Release|Any CPU
+		{D5188606-2FC8-4AD9-9141-E8EC19FE79EC}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{D5188606-2FC8-4AD9-9141-E8EC19FE79EC}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{D5188606-2FC8-4AD9-9141-E8EC19FE79EC}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{D5188606-2FC8-4AD9-9141-E8EC19FE79EC}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

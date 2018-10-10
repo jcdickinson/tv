@@ -17,7 +17,7 @@ namespace TerminalVelocity.Renderer.Events
         public CreateEvent(Action<CreateEventData> handler) : base(handler) { }
     }
 
-    public struct CreateEventData
+    public readonly struct CreateEventData
     {
         public override string ToString() => string.Empty;
     }

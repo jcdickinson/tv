@@ -17,7 +17,7 @@ namespace TerminalVelocity.Renderer.Events
         public RenderEvent(Action<RenderEventData> handler) : base(handler) { }
     }
 
-    public struct RenderEventData
+    public readonly struct RenderEventData
     {
         public override string ToString() => string.Empty;
     }

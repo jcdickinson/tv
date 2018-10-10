@@ -44,9 +44,11 @@ namespace TerminalVelocity
             container.ResolveUnregisteredType += ResolveEvent;
 
             container.RegisterEventLoop<InteractionEventLoop>();
+            container.RegisterEventLoop<Terminal.TerminalEventLoop>();
             container.RegisterSingleton<Preferences.Behavior>();
             container.RegisterSingleton<Preferences.TerminalConfiguration>();
             container.RegisterPlugin<Renderer.GridRenderer>();
+            container.RegisterPlugin<Terminal.Terminal>();
         }
 
         private static void ResolveEvent(object sender, UnregisteredTypeEventArgs e)

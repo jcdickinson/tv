@@ -18,7 +18,7 @@ namespace TerminalVelocity.Renderer.Events
         public ResizeEvent(Action<ResizeEventData> handler) : base(handler) { }
     }
 
-    public struct ResizeEventData
+    public readonly struct ResizeEventData
     {
         public readonly SizeF Size;
 

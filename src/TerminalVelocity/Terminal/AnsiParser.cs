@@ -28,7 +28,6 @@ namespace TerminalVelocity.Terminal
 {
     internal struct AnsiParser
     {
-
         private const int G0 = 0;
         private const int G1 = 1;
         private const int G2 = 2;
@@ -205,7 +204,7 @@ namespace TerminalVelocity.Terminal
             }
         }
 
-        public void OnEscapeSequenceEvent(EscapeCommand command, ReadOnlySpan<byte> intermediates, IgnoredData ignored = default)
+        public void OnEscapeSequence(EscapeCommand command, ReadOnlySpan<byte> intermediates, IgnoredData ignored = default)
         {
             int index;
             switch (command)

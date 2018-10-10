@@ -30,7 +30,6 @@ namespace TerminalVelocity.Eventing
         private readonly ConcurrentQueue<EventPublication> _events;
         private readonly CancellationTokenSource _cancellationToken;
         private EventLoopSynchronizationContext _synchronizationContext;
-        private EventLimiter<EventPublication> _eventLimiter;
 
         public abstract int Priority { get; }
         protected bool IsRunning => !_cancellationToken.IsCancellationRequested;
@@ -45,7 +44,6 @@ namespace TerminalVelocity.Eventing
         {
             _events = new ConcurrentQueue<EventPublication>();
             _cancellationToken = new CancellationTokenSource();
-            _eventLimiter = new EventLimiter<EventPublication>(EventLimiterPolicy.UpToLatest);
         }
 
         protected void CreateSynchronizationContext()
@@ -81,7 +79,6 @@ namespace TerminalVelocity.Eventing
             where TPayload : struct
         {
             _events.Enqueue(new EventPublication(id, @event));
-            _eventLimiter.EventPublished<EventPublication>(id);
             OnEventPublished(id, e);
         }
 
@@ -102,11 +99,9 @@ namespace TerminalVelocity.Eventing
 
         protected void ExecuteEvents()
         {
-            _eventLimiter.FreezeLatest();
+            _events.Enqueue(default);
 
-            while (_events.TryPeek(out EventPublication @event) &&
-                    _eventLimiter.ShouldExecuteEvent(@event.Id, @event, out @event) &&
-                    _events.TryDequeue(out @event))
+            while (_events.TryDequeue(out EventPublication @event) && @event.Event != null)
                 @event.Event.PublishEvent(@event.Id);
         }
     }

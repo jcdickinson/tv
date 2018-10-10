@@ -28,6 +28,7 @@ namespace TerminalVelocity.Direct2D
             container.RegisterEventLoop<UIEventLoop>();
 
             container.RegisterEventLoop<RenderEventLoop, DirectX.DirectXRenderEventLoop>();
+            container.RegisterPlugin<WinPty.WinPtyPlugin>();
         }
     }
 }

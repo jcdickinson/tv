@@ -69,12 +69,12 @@ namespace TerminalVelocity.Terminal
         private readonly CharacterParser.CharacterEvent _ascii;
 
         public VTParser(
-            int maxIntermediates = 2,
-            int maxParameters = 16,
-            int maxOsCommandRaw = 1024,
             VTParserEvents events = default,
             CharacterParser.CharacterEvent utf8 = default,
-            CharacterParser.CharacterEvent ascii = default)
+            CharacterParser.CharacterEvent ascii = default,
+            int maxIntermediates = 2,
+            int maxParameters = 16,
+            int maxOsCommandRaw = 1024)
         {
 
             _state = ParserState.Ground;

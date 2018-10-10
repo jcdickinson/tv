@@ -41,7 +41,7 @@ namespace TerminalVelocity.Terminal
 
             // SET G0
 
-            sut.OnEscapeSequenceEvent(EscapeCommand.ConfigureSpecialCharSet, new[] { (byte)'(' });
+            sut.OnEscapeSequence(EscapeCommand.ConfigureSpecialCharSet, new[] { (byte)'(' });
             sb.Clear();
             ix = 0;
             current = SpecialCase;
@@ -62,7 +62,7 @@ namespace TerminalVelocity.Terminal
             Assert.Equal(current + current, sb.ToString());
 
             // Reset G0 and Shift
-            sut.OnEscapeSequenceEvent(EscapeCommand.ConfigureAsciiCharSet, new[] { (byte)'(' });
+            sut.OnEscapeSequence(EscapeCommand.ConfigureAsciiCharSet, new[] { (byte)'(' });
             sut.OnExecute(ControlCode.ShiftIn);
             sb.Clear();
             ix = 0;
@@ -420,7 +420,7 @@ namespace TerminalVelocity.Terminal
             };
 
             var sut = new AnsiParser(events: events);
-            sut.OnEscapeSequenceEvent(EscapeCommand.LineFeed, default);
+            sut.OnEscapeSequence(EscapeCommand.LineFeed, default);
             Assert.Equal(1, dispatched);
         }
 
@@ -442,7 +442,7 @@ namespace TerminalVelocity.Terminal
             };
 
             var sut = new AnsiParser(events: events);
-            sut.OnEscapeSequenceEvent(EscapeCommand.NextLine, default);
+            sut.OnEscapeSequence(EscapeCommand.NextLine, default);
             Assert.Equal(1, crDispatched);
             Assert.Equal(1, lfDispatched);
         }
@@ -460,7 +460,7 @@ namespace TerminalVelocity.Terminal
             };
 
             var sut = new AnsiParser(events: events);
-            sut.OnEscapeSequenceEvent(EscapeCommand.ReverseIndex, default);
+            sut.OnEscapeSequence(EscapeCommand.ReverseIndex, default);
             Assert.Equal(1, dispatched);
         }
 
@@ -477,7 +477,7 @@ namespace TerminalVelocity.Terminal
             };
 
             var sut = new AnsiParser(events: events);
-            sut.OnEscapeSequenceEvent(EscapeCommand.IdentifyTerminal, default);
+            sut.OnEscapeSequence(EscapeCommand.IdentifyTerminal, default);
             Assert.Equal(1, dispatched);
         }
 
@@ -494,7 +494,7 @@ namespace TerminalVelocity.Terminal
             };
 
             var sut = new AnsiParser(events: events);
-            sut.OnEscapeSequenceEvent(EscapeCommand.ResetState, default);
+            sut.OnEscapeSequence(EscapeCommand.ResetState, default);
             Assert.Equal(1, dispatched);
         }
 
@@ -511,7 +511,7 @@ namespace TerminalVelocity.Terminal
             };
 
             var sut = new AnsiParser(events: events);
-            sut.OnEscapeSequenceEvent(EscapeCommand.SaveCursorPosition, default);
+            sut.OnEscapeSequence(EscapeCommand.SaveCursorPosition, default);
             Assert.Equal(1, dispatched);
         }
 
@@ -528,7 +528,7 @@ namespace TerminalVelocity.Terminal
             };
 
             var sut = new AnsiParser(events: events);
-            sut.OnEscapeSequenceEvent(EscapeCommand.RestoreCursorPosition, default);
+            sut.OnEscapeSequence(EscapeCommand.RestoreCursorPosition, default);
             Assert.Equal(1, dispatched);
         }
 
@@ -545,7 +545,7 @@ namespace TerminalVelocity.Terminal
             };
 
             var sut = new AnsiParser(events: events);
-            sut.OnEscapeSequenceEvent(EscapeCommand.SetKeypadApplicationMode, default);
+            sut.OnEscapeSequence(EscapeCommand.SetKeypadApplicationMode, default);
             Assert.Equal(1, dispatched);
         }
 
@@ -562,7 +562,7 @@ namespace TerminalVelocity.Terminal
             };
 
             var sut = new AnsiParser(events: events);
-            sut.OnEscapeSequenceEvent(EscapeCommand.UnsetKeypadApplicationMode, default);
+            sut.OnEscapeSequence(EscapeCommand.UnsetKeypadApplicationMode, default);
             Assert.Equal(1, dispatched);
         }
 
