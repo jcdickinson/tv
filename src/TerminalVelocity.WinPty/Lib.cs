@@ -177,11 +177,12 @@ namespace TerminalVelocity.WinPty
         {
             var bits = IntPtr.Size == 8 ? "x64": "x86";
 
+            var dir = Path.GetDirectoryName(typeof(Lib).Assembly.Location);
             var searchPaths = new[]
             {
-                Path.GetFullPath(Path.Combine(typeof(Lib).Assembly.Location, @"winpty", bits, "winpty.dll")),
+                Path.GetFullPath(Path.Combine(dir, @"winpty", bits, "winpty.dll")),
 #               if DEBUG
-                Path.GetFullPath(Path.Combine(typeof(Lib).Assembly.Location, @"..\..\..\..\..\..\publish\winpty", bits, "winpty.dll"))
+                Path.GetFullPath(Path.Combine(dir, @"..\..\..\..\..\publish\winpty", bits, "winpty.dll"))
 #               endif
             };
 
