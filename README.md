@@ -4,6 +4,7 @@
 [![CodeFactor](https://www.codefactor.io/repository/github/jcdickinson/tv/badge)](https://www.codefactor.io/repository/github/jcdickinson/tv)
 [![Build status](https://ci.appveyor.com/api/projects/status/nafkyr53vnowbmxa?svg=true)](https://ci.appveyor.com/project/jcdickinson/tv)
 [![codecov](https://codecov.io/gh/jcdickinson/tv/branch/master/graph/badge.svg)](https://codecov.io/gh/jcdickinson/tv)
+[![HuBoard](https://img.shields.io/badge/Hu-Board-7965cc.svg)](https://huboard.com/jcdickinson/tv)
 
 Terminal Velocity is a pretty fast terminal emulator for Windows that uses DirectWrite (GPU and Warp) for rendering. [iTerm2 functionality is planned.](https://github.com/jcdickinson/tv/issues?q=is%3Aissue+is%3Aopen+label%3Aiterm2-parity) MacOS and Linux support is plausible but unplanned; there are many great terminal emulators for these platforms.
 
