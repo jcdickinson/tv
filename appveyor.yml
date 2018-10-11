@@ -39,6 +39,7 @@ build:
  project: TerminalVelocity.sln
  verbosity: minimal
  
+ # The WinPTY test don't work on AppVeyor.
 test_script:
 - ps: .\GenerateTestSolution.ps1 .\TerminalVelocity.sln
 - >-
@@ -47,6 +48,7 @@ test_script:
     TerminalVelocity.Tests.sln
     -c %CONFIGURATION%
     --no-build
+    --filter CI!=Skip
     /p:CollectCoverage=true
     /p:CoverletOutputFormat=opencover
     "/p:CoverletOutput=%APPVEYOR_BUILD_FOLDER%/coverage.xml"

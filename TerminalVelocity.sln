@@ -12,13 +12,12 @@ EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = ".settings", ".settings", "{DA529594-6251-4853-BD30-D1DA40126FCF}"
 	ProjectSection(SolutionItems) = preProject
 		.editorconfig = .editorconfig
+		appveyor.yml = appveyor.yml
 	EndProjectSection
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TerminalVelocity.WinPty", "src\TerminalVelocity.WinPty\TerminalVelocity.WinPty.csproj", "{7BD07129-3E49-4868-9EB1-76FF4F69FC55}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "TerminalVelocity.WinPty", "src\TerminalVelocity.WinPty\TerminalVelocity.WinPty.csproj", "{7BD07129-3E49-4868-9EB1-76FF4F69FC55}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TerminalVelocity.WinPty.Tests", "src\TerminalVelocity.WinPty.Tests\TerminalVelocity.WinPty.Tests.csproj", "{D5188606-2FC8-4AD9-9141-E8EC19FE79EC}"
-EndProject
-Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution Items", "{C1E69E84-C69A-49E8-A01F-212194D84A00}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "TerminalVelocity.WinPty.Tests", "src\TerminalVelocity.WinPty.Tests\TerminalVelocity.WinPty.Tests.csproj", "{D5188606-2FC8-4AD9-9141-E8EC19FE79EC}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution

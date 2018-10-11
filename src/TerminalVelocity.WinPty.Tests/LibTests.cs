@@ -8,7 +8,7 @@ namespace TerminalVelocity.WinPty
 {
     public class LibTests
     {
-        [Fact]
+        [Fact, Trait("CI", "Skip")]
         public void Lib_Load()
         {
             var lib = Lib.Create();
@@ -23,7 +23,7 @@ namespace TerminalVelocity.WinPty
             }
         }
 
-        [Fact]
+        [Fact, Trait("CI", "Skip")]
         public void Lib_ExecuteCmd()
         {
             var lib = Lib.Create();

@@ -3,7 +3,6 @@
 */
 
 using System;
-using System.Buffers;
 using System.Collections.Concurrent;
 using System.IO.Pipes;
 using System.Threading;
