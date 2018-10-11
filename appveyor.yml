@@ -34,6 +34,7 @@ dotnet_csproj:
   
 before_build:
 - appveyor-retry dotnet restore -v Minimal
+- ps: .\DownloadWinPty.ps1 .\DownloadWinPty.sln
 
 build:
  project: TerminalVelocity.sln
@@ -70,7 +71,6 @@ before_package:
     -r win10-x64
 - copy LICENSE %APPVEYOR_BUILD_FOLDER%\publish\LICENSE
 - copy NOTICES %APPVEYOR_BUILD_FOLDER%\publish\NOTICES
-- ps: .\DownloadWinPty.ps1 .\DownloadWinPty.sln
 - >-
     7z
     a
