@@ -3,7 +3,6 @@
 */
 
 using System;
-using System.Buffers;
 using System.Collections.Concurrent;
 using System.IO.Pipes;
 using System.Threading;
@@ -21,18 +20,15 @@ namespace TerminalVelocity.WinPty
             public readonly IntPtr Handle;
             public readonly NamedPipeClientStream In;
             public readonly NamedPipeClientStream Out;
-            public readonly NamedPipeClientStream Error;
 
             public Pty(
                 IntPtr handle,
                 NamedPipeClientStream @in,
-                NamedPipeClientStream @out,
-                NamedPipeClientStream error)
+                NamedPipeClientStream @out)
             {
                 Handle = handle;
                 In = @in;
                 Out = @out;
-                Error = error;
             }
         }
 
@@ -40,13 +36,11 @@ namespace TerminalVelocity.WinPty
         private readonly Lib _lib;
 
         private readonly ConsoleOutEvent _consoleOutEvent;
-        private readonly ConsoleErrorEvent _consoleErrorEvent;
         private readonly TerminalOpenedEvent _terminalOpened;
         private readonly TerminalClosedEvent _terminalClosed;
 
         public WinPtyPlugin(
             ConsoleOutEvent consoleOutEvent = null,
-            ConsoleErrorEvent consoleErrorEvent = null,
             TerminalOpenedEvent terminalOpened = null,
             TerminalClosedEvent terminalClosed = null,
             TerminalOpenEvent onTerminalOpen = null,
@@ -57,7 +51,6 @@ namespace TerminalVelocity.WinPty
             _terminals = new ConcurrentDictionary<TerminalIdentifier, Pty>();
 
             _consoleOutEvent = consoleOutEvent;
-            _consoleErrorEvent = consoleErrorEvent;
             _terminalOpened = terminalOpened;
             _terminalClosed = terminalClosed;
 
@@ -69,14 +62,14 @@ namespace TerminalVelocity.WinPty
         private EventStatus OnTerminalOpen(in TerminalOpenEventData e)
         {
             var free = new IntPtr[3];
-            var dispose = new NamedPipeClientStream[3];
+            var dispose = new NamedPipeClientStream[2];
             try
             {
                 TerminalOpenEventData d = e;
                 Pty pty = _terminals.GetOrAdd(e.Terminal, id =>
                  {
                      free[0] = _lib.CheckResult(
-                         _lib.ConfigNew(Lib.AgentOptions.ColorEscapes | Lib.AgentOptions.ConError, out IntPtr error),
+                         _lib.ConfigNew(Lib.AgentOptions.None, out IntPtr error),
                          error, "Failed to create WinPTY configuration.");
 
                      free[1] = _lib.CheckResult(
@@ -88,30 +81,26 @@ namespace TerminalVelocity.WinPty
                      var outName = _lib.ConOutName(free[1]);
 
                      if (string.IsNullOrEmpty(inName)) throw new InvalidOperationException("Failed to acquire WinPTY input pipe.");
-                     if (string.IsNullOrEmpty(errorName)) throw new InvalidOperationException("Failed to acquire WinPTY error pipe.");
                      if (string.IsNullOrEmpty(outName)) throw new InvalidOperationException("Failed to acquire WinPTY output pipe.");
 
                      Lib.ParsePipeName(ref inName, out var inServer);
-                     Lib.ParsePipeName(ref errorName, out var errorServer);
                      Lib.ParsePipeName(ref outName, out var outServer);
 
                      dispose[0] = new NamedPipeClientStream(inServer, inName, PipeDirection.Out);
-                     dispose[1] = new NamedPipeClientStream(errorServer, errorName, PipeDirection.In);
-                     dispose[2] = new NamedPipeClientStream(outServer, outName, PipeDirection.In);
+                     dispose[1] = new NamedPipeClientStream(outServer, outName, PipeDirection.In);
 
                      dispose[0].Connect(1000);
                      dispose[1].Connect(1000);
-                     dispose[2].Connect(1000);
 
                      free[2] = _lib.CheckResult(
-                         _lib.SpawnConfigNew(Lib.SpawnOptions.AutoShutdown, d.ApplicationName, d.Arguments, d.WorkingDirectory, d.Environment, out error),
+                         _lib.SpawnConfigNew(Lib.SpawnOptions.AutoShutdown | Lib.SpawnOptions.ExitAfterShutdown, d.ApplicationName, d.Arguments, d.WorkingDirectory, d.Environment, out error),
                          error, "Failed to create WinPTY spawn config.");
 
                      _lib.CheckResult(
                          _lib.Spawn(free[1], free[2], out IntPtr processHandle, out IntPtr threadHandle, out var createProcessHandle, out error),
                          error, "Failed to spawn WinPTY process.");
 
-                     return new Pty(free[1], dispose[0], dispose[2], dispose[1]);
+                     return new Pty(free[1], dispose[0], dispose[1]);
                  });
 
                 if (pty.Handle == free[1])
@@ -119,7 +108,6 @@ namespace TerminalVelocity.WinPty
                     free[1] = IntPtr.Zero;
                     dispose[0] = dispose[1] = dispose[2] = null;
                     Worker(pty.Out, e.Terminal, _consoleOutEvent, (t, m) => new ConsoleOutEventData(t, m));
-                    Worker(pty.Error, e.Terminal, _consoleErrorEvent, (t, m) => new ConsoleErrorEventData(t, m));
                     _terminalOpened?.Publish(new TerminalOpenedEventData(e.Terminal));
                 }
                 else
@@ -138,7 +126,6 @@ namespace TerminalVelocity.WinPty
             {
                 using (dispose[0])
                 using (dispose[1])
-                using (dispose[2])
                 { }
 
                 var i = 0;
@@ -211,7 +198,6 @@ namespace TerminalVelocity.WinPty
         {
             using (pty.In)
             using (pty.Out)
-            using (pty.Error)
             {
                 _lib.Free(pty.Handle);
             }
